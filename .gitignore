@@ -1,11 +1,17 @@
 
-.venv/
+.conda/
 secrets.json
 comment.json
 comments.json
 post.json
 posts_listing.json
 a.json
+ideas.txt
+audio.mp3.tmp
+background_videos/
+finished_videos/
+mfa_test/
+test.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
