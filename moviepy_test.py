@@ -1,4 +1,5 @@
 from math import floor
+from pathlib import Path
 from random import randrange
 from moviepy.video.fx import resize, crop
 from moviepy import *
@@ -81,14 +82,14 @@ def generate_combined_text_clip(
 
 
 def select_background_video(min_length: int, max_attempts: int = 10) -> VideoFileClip:
-
-    possible_videos: list[str] = os.listdir(BACKGROUND_VIDEO_PATH)
-    possible_videos = list(
-        filter(lambda x: x.endswith(POSSIBLE_FILE_ENDINGS), possible_videos)
-    )
+    possible_videos = [
+        p.resolve()
+        for p in Path(BACKGROUND_VIDEO_PATH).glob("**/*")
+        if p.suffix in POSSIBLE_FILE_ENDINGS
+    ]
 
     selected_file = possible_videos[randrange(0, len(possible_videos))]
-    clip = VideoFileClip(BACKGROUND_VIDEO_PATH + selected_file)
+    clip = VideoFileClip(selected_file)
     print(f"selected {selected_file} as background video")
 
     if min_length > clip.duration:
@@ -110,20 +111,17 @@ def crop_to_center(clip: VideoClip, new_aspect_ratio: float):
 
 
 def generate_video(
-    text: str, 
-    resolution: Tuple[int, int], 
-    filename: str, 
-    language: str = "english"
+    text: str, resolution: Tuple[int, int], filename: str, language: str = "english"
 ) -> None:
     # print("SKIPPING GENERATING AUDIO")
     openaitest = OpenAiTest()
     print("generating audio")
     openaitest.generate_audio(text, "tmp/audio.aac")
     audio_clip: AudioClip = AudioFileClip("tmp/audio.aac")
-    
-    audio_clip.write_audiofile("tmp/audio.wav")
     print(f"the video will be {audio_clip.duration}s long")
-    with open("tmp/audio.txt", "w", encoding='utf-8') as file:
+
+    audio_clip.write_audiofile("tmp/audio.wav")
+    with open("tmp/audio.txt", "w", encoding="utf-8") as file:
         file.write(text)
     align_audio_and_text("tmp/audio.wav", "tmp/audio.txt", language)
 
