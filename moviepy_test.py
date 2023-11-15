@@ -5,7 +5,6 @@ from moviepy.video.fx import resize, crop
 from moviepy import *
 from typing import Tuple
 from openai_test import OpenAiTest
-import os
 import subprocess
 import textgrid
 
@@ -64,21 +63,21 @@ def generate_text_list(text: str):
 def generate_combined_text_clip(
     text: str, text_box_size: Tuple[float, float], textgrid_filename: str
 ):
-    text_clips = []
-    text_sections = generate_text_list(text)
+    text_clips: list[TextClip] = []
+    text_sections: list[str] = generate_text_list(text)
     print(f"splitting text into {len(text_sections)} clips")
-    timestamps = parseTextgrid(textgrid_filename, text_sections)
+    timestamps: list[Tuple[str, float, float]] = parseTextgrid(
+        textgrid_filename, text_sections
+    )
 
     for section in timestamps:
         text_clip: TextClip = generate_text_clip(section[0], text_box_size)
-
-        duration = section[2] - section[1]
-        print(f"{section} is played for {duration:.2f} seconds")
-
-        text_clip = text_clip.with_duration(duration)
+        text_clip = text_clip.with_start(section[1])
+        text_clip = text_clip.with_end(section[2])
+        print(f"{section} is played for {(section[2] - section[1]):.2f} seconds")
         text_clip = text_clip.with_position("center")
         text_clips.append(text_clip)
-    return concatenate_videoclips(text_clips).with_position("center")
+    return CompositeVideoClip(text_clips).with_position("center")
 
 
 def select_background_video(min_length: int, max_attempts: int = 10) -> VideoFileClip:
@@ -118,7 +117,7 @@ def generate_video(
     print("generating audio")
     openaitest.generate_audio(text, "tmp/audio.aac")
     audio_clip: AudioClip = AudioFileClip("tmp/audio.aac")
-    print(f"the video will be {audio_clip.duration}s long")
+    # print(f"the video will be {audio_clip.duration}s long")
 
     audio_clip.write_audiofile("tmp/audio.wav")
     with open("tmp/audio.txt", "w", encoding="utf-8") as file:
@@ -126,7 +125,7 @@ def generate_video(
     align_audio_and_text("tmp/audio.wav", "tmp/audio.txt", language)
 
     text_box_size = (resolution[0] * 0.8, 0)
-    combined_text_clip = generate_combined_text_clip(
+    combined_text_clip: VideoClip = generate_combined_text_clip(
         text, text_box_size, "tmp/audio.TextGrid"
     )
 
@@ -144,7 +143,7 @@ def generate_video(
     )
 
     backgroundVideo = backgroundVideo.subclip(start_time, end_time)
-    result = CompositeVideoClip([backgroundVideo, combined_text_clip])
+    result: VideoClip = CompositeVideoClip([backgroundVideo, combined_text_clip])
 
     result = result.with_audio(audio_clip)
     result.write_videofile(f"finished_videos/{filename}.mp4", fps=25)
@@ -168,7 +167,6 @@ def align_audio_and_text(audio_filename: str, text_filename: str, language: str)
 
 def parseTextgrid(filename, text_segments: list[str]):
     tg = textgrid.TextGrid.fromFile(filename)
-
     # tg[0] is the ist of words
     # remove pauses and stuff
     filtered_tg = filter(lambda x: not x.mark.startswith("<"), tg[0])
@@ -178,22 +176,19 @@ def parseTextgrid(filename, text_segments: list[str]):
 
     i = 0
     for segment in text_segments:
-        segment = segment.strip()
-        first = True
-        start: float = 0.0
-        end: float = 0.0
-        for word in segment.split(" "):
-            if first:
-                start = filtered_tg[i].minTime
-                first = False
+        segment_words = segment.strip().split()
+        start_index: int = 0
+        end_index: int = 0
+
+        for index, word in enumerate(segment_words):
+            if index == 0:
+                start_index = i
+            if index == len(segment_words) - 1:
+                end_index = i
             i += 1
-        end = filtered_tg[i - 1].maxTime
-        timestamps.append((segment, start, end))
+
+        # print((segment, filtered_tg[start_index].minTime, filtered_tg[end_index].maxTime))
+        timestamps.append(
+            (segment, filtered_tg[start_index].minTime, filtered_tg[end_index].maxTime)
+        )
     return timestamps
-
-
-text = """I am a 20 year old female but the story I am about to tell happened when I was around 7 years old. So to give a little backstory, from the ages of 4-12, my family and I lived on a heavily wooded 14 acre property in the south. """
-
-
-# generate_video(text, (1920, 1080), "my_first_video")
-generate_video(text, (1080, 1920), "my_first_short")
