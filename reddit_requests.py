@@ -1,5 +1,6 @@
 import requests
 import json
+import emoji
 
 useragent = "yourbot"
 
@@ -50,6 +51,7 @@ class Post:
         self.subreddit: str = get_parameter(post, "subreddit")
         self.title: str = get_parameter(post, "title")
         self.author: str = get_parameter(post, "author")
+        self.selftext: str = get_parameter(post, "selftext")
         self.post_id: str = get_parameter(post, "id")
         self.gilded: int = int(get_parameter(post, "gilded"))
         self.upvotes: int = int(get_parameter(post, "ups"))
@@ -57,7 +59,33 @@ class Post:
         self.score: int = int(get_parameter(post, "score"))
         self.url: str = get_parameter(post, "url")
         self.comments: list[Comment] = []
-
+        
+        self.tidy_up_post()
+        
+    def tidy_up_post(self):
+        
+        to_remove = ["\nedit", "\ntldr", "\ntl;dr"]
+        
+        
+        for phrase in to_remove:
+            if phrase in self.selftext.lower():
+                edit_position = self.selftext.lower().index(phrase)
+                if edit_position > len(self.selftext) * 0.4:
+                    print(f"removing {phrase.strip()}")
+                    self.selftext = self.selftext[0:edit_position]
+        
+        self.selftext = " ".join(self.selftext.split())
+        self.selftext = self.selftext.replace("\n", " ")
+        self.selftext = self.selftext.replace("&amp;#x200B;", "")
+        self.selftext = self.selftext.replace("\\*", "")
+        self.selftext = self.selftext.replace("\\*", "")
+        self.selftext = self.selftext.replace("*\"", "\"")
+        self.selftext = self.selftext.replace("\"*", "\"")
+        self.selftext = emoji.replace_emoji(self.selftext, "")
+        
+        
+        print(self.post_id)
+        print(self.selftext)
 
 class Comment:
     def __str__(self) -> str:
@@ -170,26 +198,7 @@ def get_good_comments(comments):
     )
 
 
-subreddit = "showerthoughts"
-# limit = 100
-timeframe = "month"  # hour, day, week, month, year, all
-listing = "top"  # controversial, best, hot, new, random, rising, top
 
-search = PostSearch(subreddit, listing, timeframe)
-# for post in search.posts:
-#     print(post)
-
-
-search.posts[1].searchComments("top")
-comments = search.posts[1].comments
-
-comment = comments[0]
-
-chain = comment.load_comment_chain(20)
-for c in chain:
-    print(c)
-
-
-# TODO filter comments by popularity
+# TODO
 # good_comments = get_good_comments(comments)
 # print(f"filtered comments is {len(good_comments)} long")
