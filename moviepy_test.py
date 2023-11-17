@@ -66,7 +66,7 @@ def generate_combined_text_clip(
     text_clips: list[TextClip] = []
     text_sections: list[str] = generate_text_list(text)
     print(f"splitting text into {len(text_sections)} clips")
-    timestamps: list[Tuple[str, float, float]] = parseTextgrid(
+    timestamps: list[Tuple[str, float, float]] = parse_textgrid(
         textgrid_filename, text_sections
     )
 
@@ -115,11 +115,11 @@ def generate_video(
     # print("SKIPPING GENERATING AUDIO")
     openaitest = OpenAiTest()
     print("generating audio")
-    openaitest.generate_audio(text, "tmp/audio.aac")
-    audio_clip: AudioClip = AudioFileClip("tmp/audio.aac")
-    # print(f"the video will be {audio_clip.duration}s long")
-
+    openaitest.generate_mp3(text, "tmp/audio.mp3")
+    audio_clip: AudioClip = AudioFileClip("tmp/audio.mp3")
     audio_clip.write_audiofile("tmp/audio.wav")
+    print(f"the video will be {audio_clip.duration}s long")
+
     with open("tmp/audio.txt", "w", encoding="utf-8") as file:
         file.write(text)
     align_audio_and_text("tmp/audio.wav", "tmp/audio.txt", language)
@@ -165,12 +165,19 @@ def align_audio_and_text(audio_filename: str, text_filename: str, language: str)
     )
 
 
-def parseTextgrid(filename, text_segments: list[str]):
+def parse_textgrid(filename, text_segments: list[str]):
     tg = textgrid.TextGrid.fromFile(filename)
     # tg[0] is the ist of words
     # remove pauses and stuff
     filtered_tg = filter(lambda x: not x.mark.startswith("<"), tg[0])
     filtered_tg = list(filtered_tg)
+    print(f"filtered_tg is {len(filtered_tg)} long ")
+    
+    words = ' '.join(text_segments).split()
+    for i in range(207):
+        print(f"{filtered_tg[i]} - {words[i]}")
+    
+    
 
     timestamps: list[Tuple[str, float, float]] = []
 
