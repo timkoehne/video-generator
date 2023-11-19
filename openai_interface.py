@@ -8,9 +8,9 @@ from io import BytesIO
 import base64
 
 
-class OpenAiTest:
+class OpenAiInterface:
     def __init__(self) -> None:
-        with open("secrets.json", "r") as file:
+        with open("config/secrets.json", "r") as file:
             secrets = json.loads(file.read())
             openai_api_key = secrets["openai_api_key"]
 

@@ -1,0 +1,21 @@
+{
+    "comment_based": [
+        "AskReddit",
+        "ask",
+        "NoStupidQuestions"
+    ],
+    "story_based": [
+        "AmItheAsshole",
+        "relationships",
+        "relationship_advice",
+        "confessions",
+        "tifu",
+        "IDontWorkHereLady",
+        "AmItheAsshole"
+    ],
+    "scary_story_based": [
+        "TrueScaryStories",
+        "scarystories",
+        "LetsNotMeet"
+    ]    
+}

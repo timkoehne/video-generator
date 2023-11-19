@@ -4,5 +4,8 @@
 \*,"
  " ," 
 AITA,Am I The Asshole?
+aita,am I the asshole?
+TIFU,Today I fucked up
+tifu,today I fucked up
 idk,I don't know
 IDK,I don't know

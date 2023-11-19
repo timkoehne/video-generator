@@ -4,7 +4,7 @@ from random import randrange
 from moviepy.video.fx import resize, crop
 from moviepy import *
 from typing import Tuple
-from openai_test import OpenAiTest
+from openai_interface import OpenAiInterface
 import subprocess
 import textgrid
 import string
@@ -133,7 +133,7 @@ def generate_video(
     text: str, resolution: Tuple[int, int], filename: str, language: str = "english"
 ) -> None:
     # print("SKIPPING GENERATING AUDIO")
-    openaitest = OpenAiTest()
+    openaitest = OpenAiInterface()
     print("generating audio")
     openaitest.generate_mp3(text, "tmp/audio.mp3")
 
