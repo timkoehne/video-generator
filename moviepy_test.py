@@ -7,6 +7,7 @@ from typing import Tuple
 from openai_test import OpenAiTest
 import subprocess
 import textgrid
+import string
 
 
 BACKGROUND_VIDEO_PATH = "f:/background_videos/"
@@ -33,7 +34,7 @@ def generate_text_clip(text: str, size: Tuple[float, float]):
         stroke_color="black",
         stroke_width=5,
         size=(size[0], size[1]),
-        align="center",
+        align="center"
     )
 
 
@@ -116,13 +117,17 @@ def generate_video(
     openaitest = OpenAiTest()
     print("generating audio")
     openaitest.generate_mp3(text, "tmp/audio.mp3")
+
     audio_clip: AudioClip = AudioFileClip("tmp/audio.mp3")
     audio_clip.write_audiofile("tmp/audio.wav")
     print(f"the video will be {audio_clip.duration}s long")
 
     with open("tmp/audio.txt", "w", encoding="utf-8") as file:
-        file.write(text)
-    align_audio_and_text("tmp/audio.wav", "tmp/audio.txt", language)
+        
+        exclude = set(string.punctuation)
+        file.write(''.join(char for char in text if char not in exclude))
+
+    align_audio_and_text("tmp/", language)
 
     text_box_size = (resolution[0] * 0.8, 0)
     combined_text_clip: VideoClip = generate_combined_text_clip(
@@ -149,53 +154,46 @@ def generate_video(
     result.write_videofile(f"finished_videos/{filename}.mp4", fps=25)
 
 
-def align_audio_and_text(audio_filename: str, text_filename: str, language: str):
+def align_audio_and_text(audio_and_text_dir: str, language: str):
     dictionary_name, acoustic_model_name = mfa_dictionary_names[language]
 
     subprocess.run(
         [
             "mfa",
-            "align_one",
-            audio_filename,
-            text_filename,
+            "align",
+            audio_and_text_dir,
             dictionary_name,
             acoustic_model_name,
             "tmp/",
+            "--clean",
+            "--single_speaker",
         ]
     )
 
 
 def parse_textgrid(filename, text_segments: list[str]):
     tg = textgrid.TextGrid.fromFile(filename)
-    # tg[0] is the ist of words
+    # tg[0] is the list of words
     # remove pauses and stuff
-    filtered_tg = filter(lambda x: not x.mark.startswith("<"), tg[0])
+    filtered_tg = filter(
+        lambda x: not x.mark == "", tg[0]
+    )
     filtered_tg = list(filtered_tg)
     print(f"filtered_tg is {len(filtered_tg)} long ")
-    
-    words = ' '.join(text_segments).split()
-    for i in range(207):
+
+    words = " ".join(text_segments).split()
+    for i in range(min(len(filtered_tg), len(words))):
         print(f"{filtered_tg[i]} - {words[i]}")
-    
-    
 
     timestamps: list[Tuple[str, float, float]] = []
-
-    i = 0
-    for segment in text_segments:
-        segment_words = segment.strip().split()
-        start_index: int = 0
-        end_index: int = 0
-
-        for index, word in enumerate(segment_words):
-            if index == 0:
-                start_index = i
-            if index == len(segment_words) - 1:
-                end_index = i
-            i += 1
-
-        # print((segment, filtered_tg[start_index].minTime, filtered_tg[end_index].maxTime))
-        timestamps.append(
-            (segment, filtered_tg[start_index].minTime, filtered_tg[end_index].maxTime)
+    for index, segment in enumerate(text_segments):
+        from_index = sum(len(s.split()) for s in text_segments[:index])
+        to_index = sum(
+            len(s.split())
+            for s in text_segments[: min(index + 1, len(text_segments) - 1)]
         )
+        timestamps.append(
+            (segment, filtered_tg[from_index].minTime, filtered_tg[to_index].maxTime)
+        )
+
     return timestamps

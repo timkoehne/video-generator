@@ -1,6 +1,8 @@
+from typing import Tuple
 import requests
 import json
 import emoji
+import re
 
 useragent = "yourbot"
 
@@ -22,6 +24,7 @@ class PostSearch:
 
 
 class Post:
+    
     def __str__(self) -> str:
         return (
             self.author
@@ -63,10 +66,7 @@ class Post:
         self.tidy_up_post()
         
     def tidy_up_post(self):
-        
-        to_remove = ["\nedit", "\ntldr", "\ntl;dr"]
-        
-        
+        to_remove = ["\nedit", "\ntldr", "\ntl;dr", "update:"]
         for phrase in to_remove:
             if phrase in self.selftext.lower():
                 edit_position = self.selftext.lower().index(phrase)
@@ -75,17 +75,31 @@ class Post:
                     self.selftext = self.selftext[0:edit_position]
         
         self.selftext = " ".join(self.selftext.split())
-        self.selftext = self.selftext.replace("\n", " ")
-        self.selftext = self.selftext.replace("&amp;#x200B;", "")
-        self.selftext = self.selftext.replace("\\*", "")
-        self.selftext = self.selftext.replace("\\*", "")
-        self.selftext = self.selftext.replace("*\"", "\"")
-        self.selftext = self.selftext.replace("\"*", "\"")
+        self.selftext = self.selftext.replace(" , ", ", ")
+        self.selftext = self.selftext.replace(" . ", ". ")
         self.selftext = emoji.replace_emoji(self.selftext, "")
+
+
+        for match in  re.findall('[a-zA-Z]+"[a-zA-Z]+', self.selftext):
+            replace_with = " ".join(match.split("\""))
+            self.selftext = self.selftext.replace(match, replace_with)
+            print(match)
+
+        for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', self.selftext):
+            replace_with = " ".join(match.split("-"))
+            self.selftext = self.selftext.replace(match, replace_with)
+            print(match)
         
         
-        print(self.post_id)
-        print(self.selftext)
+        with open("replace_in_text.txt") as file:
+            for line in file.readlines():
+                line = line.strip()
+                replace_from, replace_to = line.split(",")
+                # print(f"replacing \"{replace_from}\" with \"{replace_to}\"")
+                self.selftext = self.selftext.replace(replace_from, replace_to)
+        
+        # print(self.post_id)
+        # print(self.selftext)
 
 class Comment:
     def __str__(self) -> str:
@@ -108,6 +122,16 @@ class Comment:
         self.downvotes: int = int(get_parameter(comment, "downs"))
         self.score: int = int(get_parameter(comment, "score"))
         self.gilded: int = int(get_parameter(comment, "gilded"))
+
+
+def create_post_from_post_id(post_id: str) -> Post:
+    base_url = f"https://www.reddit.com/{post_id}.json"
+    print(base_url)
+    request = requests.get(base_url, headers={"User-agent": useragent})
+    post = request.json()[0]
+    post = get_parameter(post, "children")[0]
+    print(post)
+    return Post(post)
 
 
 def handle_replies(replies) -> list[Comment]:
