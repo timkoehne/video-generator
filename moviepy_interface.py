@@ -1,6 +1,6 @@
 from math import floor
 from pathlib import Path
-from random import randrange
+from random import randint, randrange
 from moviepy.video.fx import resize, crop
 from moviepy import *
 from typing import Tuple
@@ -18,12 +18,15 @@ class Timestamp:
 
 
 BACKGROUND_VIDEO_PATH = "f:/background_videos/"
+FINISHED_VIDEO_PATH = "C:/Users/Tim/Desktop/finished_videos/"
 POSSIBLE_FILE_ENDINGS = (".mp4", ".webm", ".mkv", ".ogv", ".mpeg", ".avi", ".mov")
 
 mfa_dictionary_names = {
     "english": ["english_us_arpa", "english_us_arpa"],
     "german": ["german_mfa", "german_mfa"],
 }
+
+threads = 16
 
 
 def generate_text_clip(text: str, size: Tuple[float, float]):
@@ -103,12 +106,13 @@ def select_background_video(min_length: int, max_attempts: int = 10) -> VideoFil
 
     if min_length > clip.duration:
         if max_attempts > 0:
-            print("retrying for background video since it isn't long enough")
+            print(f"retrying for background video since it isn't long enough: Attempts left: {max_attempts}")
             clip = select_background_video(min_length, max_attempts - 1)
         else:
             raise Exception("No suitable background video found")
 
-    start_time = randrange(0, floor(clip.duration - min_length))
+    print(f"clip duration {clip.duration} and min_length {min_length} combined: {floor(clip.duration - min_length)}")
+    start_time = randint(0, floor(clip.duration - min_length))
     end_time = start_time + min_length
 
     print(
@@ -145,7 +149,7 @@ def generate_video(
         exclude = set(string.punctuation)
         file.write("".join(char for char in text if char not in exclude))
 
-    align_audio_and_text("tmp/", language)
+    align_audio_and_text("tmp/audio.wav", "tmp/audio.txt", language)
 
     combined_text_clip: VideoClip = generate_combined_text_clip(
         text, resolution, "tmp/audio.TextGrid"
@@ -160,17 +164,18 @@ def generate_video(
     result: VideoClip = CompositeVideoClip([backgroundVideo, combined_text_clip])
 
     result = result.with_audio(audio_clip)
-    result.write_videofile(f"finished_videos/{filename}.mp4", fps=25)
+    result.write_videofile(FINISHED_VIDEO_PATH + filename + ".mp4", fps=25, threads=threads, preset="veryfast") #TODO threads and preset dont seem to do anything
 
 
-def align_audio_and_text(audio_and_text_dir: str, language: str):
+def align_audio_and_text(audiofile: str, textfile: str, language: str):
     dictionary_name, acoustic_model_name = mfa_dictionary_names[language]
 
     subprocess.run(
         [
             "mfa",
-            "align",
-            audio_and_text_dir,
+            "align_one",
+            audiofile,
+            textfile,
             dictionary_name,
             acoustic_model_name,
             "tmp/",
@@ -184,7 +189,7 @@ def parse_textgrid(filename, text_segments: list[str]):
     tg = textgrid.TextGrid.fromFile(filename)
     # tg[0] is the list of words
     # filter to remove pauses
-    filtered_tg = filter(lambda x: not x.mark == "", tg[0])
+    filtered_tg = filter(lambda x: not x.mark == "" and not x.mark.startswith("<"), tg[0])
     filtered_tg = list(filtered_tg)
     print(f"filtered_tg is {len(filtered_tg)} long ")
 

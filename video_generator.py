@@ -1,9 +1,10 @@
 import json
 from random import randrange
+import datetime
 
 from typing import Literal, Tuple
 from moviepy_interface import generate_video
-from reddit_requests import Post, PostSearch, create_post_from_post_id
+from reddit_requests import Post, PostSearch, Comment, create_post_from_post_id
 
 
 with open("config/reddit_threads.json") as file:
@@ -13,6 +14,7 @@ with open("config/reddit_threads.json") as file:
 def generate_story_video(
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
+    filename: str = datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
 ):
     with open("config/already_posted.txt", "r") as file:
         already_posted_ids = file.read().splitlines()
@@ -40,10 +42,12 @@ def generate_story_video(
     print(f'selected post titled "{selected_post.title}"')
     print(f"saving post_id {selected_post.post_id} as selected")
 
-    generate_video(selected_post.selftext, (1920, 1080), "my_first_video")
+    generate_video(selected_post.selftext, (1080, 1920), filename)
 
 
-def generate_post_video(post_id: str):
+def generate_post_video(
+    post_id: str, filename: str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+):
     post = create_post_from_post_id(post_id)
     with open("config/already_posted.txt", "r") as file:
         already_posted_ids = file.read().splitlines()
@@ -55,8 +59,19 @@ def generate_post_video(post_id: str):
     print(f'selected post titled "{post.title}"')
     print(f"saving post_id {post.post_id} as selected")
 
-    generate_video(post.selftext, (1920, 1080), "my_first_video")
+    generate_video(post.selftext, (1920, 1080), filename)
 
 
 # generate_post_video("17pdufg")
-generate_story_video("month", "top")
+# for i in range(3):
+# generate_story_video("month", "top", f"vid_{i}.mp4")
+
+
+generate_post_video("17j7yoo")
+# generate_story_video("month", "top")
+
+# p: Post = create_post_from_post_id("17r46je")
+# comments: list[Comment] = p.get_good_comments()
+
+# for comment in comments[0].load_comment_chain(3):
+#     print(comment)
