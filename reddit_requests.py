@@ -24,7 +24,6 @@ class PostSearch:
 
 
 class Post:
-    
     def __str__(self) -> str:
         return (
             self.author
@@ -35,7 +34,7 @@ class Post:
             + " score"
         )
 
-    def searchComments(self, listing):
+    def load_comments(self, listing):
         try:
             print(f"Trying to access comments of post {self.post_id}")
             base_url = f"https://www.reddit.com/{self.post_id}/.json?sort={listing}"
@@ -62,45 +61,73 @@ class Post:
         self.score: int = int(get_parameter(post, "score"))
         self.url: str = get_parameter(post, "url")
         self.comments: list[Comment] = []
-        
+
         self.tidy_up_post()
-        
+
     def tidy_up_post(self):
         # print(self.selftext)
-        to_remove = ["\nedit", "\ntldr", "\ntl;dr", "update:"]
+        to_remove = ["\nedit", "*edit", "\ntldr", "\ntl;dr", "update:"]
         for phrase in to_remove:
             if phrase in self.selftext.lower():
                 edit_position = self.selftext.lower().index(phrase)
                 if edit_position > len(self.selftext) * 0.4:
                     print(f"removing {phrase.strip()}")
                     self.selftext = self.selftext[0:edit_position]
-        
+
         self.selftext = " ".join(self.selftext.split())
         self.selftext = self.selftext.replace(" , ", ", ")
         self.selftext = self.selftext.replace(" . ", ". ")
+        self.selftext = self.selftext.replace("“", "\"")
         self.selftext = emoji.replace_emoji(self.selftext, "")
 
-
-        for match in  re.findall('[a-zA-Z]+"[a-zA-Z]+', self.selftext):
-            replace_with = " ".join(match.split("\""))
+        for match in re.findall('[a-zA-Z]+"[a-zA-Z]+', self.selftext):
+            replace_with = " ".join(match.split('"'))
+            self.selftext = self.selftext.replace(match, replace_with)
+            print(f"replacing {match} with {replace_with}")
+            
+        for match in re.findall('[a-zA-Z]\(', self.selftext):
+            replace_with = " (".join(match.split('('))
+            self.selftext = self.selftext.replace(match, replace_with)
+            print(f"replacing {match} with {replace_with}")
+            
+        for match in re.findall('\)[a-zA-Z]', self.selftext):
+            replace_with = ") ".join(match.split(')'))
             self.selftext = self.selftext.replace(match, replace_with)
             print(f"replacing {match} with {replace_with}")
 
-        for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', self.selftext):
-            replace_with = " ".join(match.split("-"))
-            self.selftext = self.selftext.replace(match, replace_with)
-            print(f"replacing {match} with {replace_with}")
-        
-        
+        # for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', self.selftext):
+        #     replace_with = " ".join(match.split("-"))
+        #     self.selftext = self.selftext.replace(match, replace_with)
+        #     print(f"replacing {match} with {replace_with}")
+
         with open("config/replace_in_text.txt") as file:
             for line in file.readlines():
-                line = line.strip()
+                line = line.strip("\n")
                 replace_from, replace_to = line.split(",")
                 # print(f"replacing \"{replace_from}\" with \"{replace_to}\"")
                 self.selftext = self.selftext.replace(replace_from, replace_to)
-        
+
         # print(self.post_id)
-        # print(self.selftext)
+        print(self.selftext)
+
+
+    def get_good_comments(self, score_threshold: int = 100):
+
+        if len(self.comments) == 0:
+            self.load_comments("top")
+
+        print(f"there are {len(self.comments)} comments")
+        for index, comment in enumerate(self.comments):
+            chain_score = calc_chain_score(comment)
+
+            print(
+                f"{index}, : Comment from {comment.author} has {comment.score} score. This comment chain has a combined {chain_score}"
+            )
+            
+
+        return list(filter(lambda comment: calc_chain_score(comment) > score_threshold, self.comments))
+
+
 
 class Comment:
     def __str__(self) -> str:
@@ -110,10 +137,8 @@ class Comment:
         chain: list[Comment] = []
         chain.append(self)
         if depth > 1 and len(self.replies) > 0:
-            chain += self.replies[0].load_comment_chain(depth-1)
+            chain += self.replies[0].load_comment_chain(depth - 1)
         return chain
-        
-
 
     def __init__(self, comment) -> None:
         self.author: str = get_parameter(comment, "author")
@@ -165,65 +190,11 @@ def get_parameter(data, parameter):
     raise Exception("Unknown Parameter")
 
 
-def calc_replies_score(comment):  # only pay attention to direct children
-    sum = 0
-    if "kind" in comment and comment["kind"] == "t1":
-        if comment["data"]["replies"] == "":
-            sum += int(get_parameter(comment, "score"))
-        else:
-            replies = comment["data"]["replies"]["data"]["children"]
-            for reply in replies:
-                reply_score = int(get_parameter(reply, "score"))
-                # print("comment by", get_parameter(reply, "author"), "has", reply_score, "reply_score")
-                sum += reply_score
+def calc_chain_score(comment: Comment, skip_first: bool = True) -> int:
+
+    sum = comment.score
+
+    for reply in comment.replies:
+        sum += calc_chain_score(reply, False)
+
     return sum
-
-
-def test(comment, score_threshold):  # only pay attention to direct children
-    ret = []
-    if "kind" in comment and comment["kind"] == "t1":
-        if comment["data"]["replies"] == "":
-            if int(get_parameter(comment, "score")) > score_threshold:
-                ret.append(comment)
-        else:
-            replies = comment["data"]["replies"]["data"]["children"]
-            if int(get_parameter(comment, "score")) > score_threshold:
-                ret.append(comment)
-            for reply in replies:
-                ret += test(reply, score_threshold)
-    return ret
-
-
-def get_good_comments(comments):
-    score_threshold = 100
-
-    for index, comment in enumerate(comments):
-        replies_comment_score = calc_replies_score(comment)
-
-        a = test(comment, score_threshold)
-        with open("a.json", "a") as file:
-            file.write(json.dumps(a))
-
-        print(
-            index,
-            ": Comment from",
-            get_parameter(comment, "author"),
-            "has",
-            get_parameter(comment, "score"),
-            "score. replies have a combined",
-            replies_comment_score,
-            "comment score",
-        )
-
-    return list(
-        filter(
-            lambda comment: int(get_parameter(comment, "score")) > score_threshold,
-            comments,
-        )
-    )
-
-
-
-# TODO
-# good_comments = get_good_comments(comments)
-# print(f"filtered comments is {len(good_comments)} long")

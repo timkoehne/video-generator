@@ -9,9 +9,16 @@
         "relationships",
         "relationship_advice",
         "confessions",
+        "confession",
         "tifu",
         "IDontWorkHereLady",
-        "AmItheAsshole"
+        "AmItheAsshole",
+        "entitledparents",
+        "prorevenge",
+        "maliciouscompliance",
+        "choosingbeggers",
+        "entitledpeople",
+        "IDOWorkHereLady"
     ],
     "scary_story_based": [
         "TrueScaryStories",
@@ -19,3 +26,5 @@
         "LetsNotMeet"
     ]    
 }
+
+
