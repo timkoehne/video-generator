@@ -2,12 +2,15 @@ from math import floor
 from pathlib import Path
 from random import randint, randrange
 from moviepy.video.fx import resize, crop
+from moviepy.audio.fx import multiply_volume
 from moviepy import *
 from typing import Tuple
 from openai_interface import OpenAiInterface
 import subprocess
 import textgrid
 import string
+from reddit_requests import Comment
+import re
 
 
 class Timestamp:
@@ -93,7 +96,7 @@ def generate_combined_text_clip(
     return CompositeVideoClip(text_clips, resolution).with_position("center")
 
 
-def select_background_video(min_length: int, max_attempts: int = 10) -> VideoFileClip:
+def select_background_video(min_length: int, max_attempts: int = 10) -> VideoClip:
     possible_videos = [
         p.resolve()
         for p in Path(BACKGROUND_VIDEO_PATH).glob("**/*")
@@ -101,7 +104,7 @@ def select_background_video(min_length: int, max_attempts: int = 10) -> VideoFil
     ]
 
     selected_file = possible_videos[randrange(0, len(possible_videos))]
-    clip = VideoFileClip(selected_file)
+    clip: VideoClip = VideoFileClip(selected_file)
     print(f"selected {selected_file} as background video")
 
     if min_length > clip.duration:
@@ -120,26 +123,30 @@ def select_background_video(min_length: int, max_attempts: int = 10) -> VideoFil
     )
 
     clip = clip.subclip(start_time, end_time)
+    clip = clip.afx(multiply_volume, 0.1)
 
     return clip
 
 
-def crop_to_center(clip: VideoClip, new_aspect_ratio: float):
+def crop_to_center_and_resize(clip: VideoClip, to_resolution: Tuple[int, int]):
+    new_aspect_ratio: float = to_resolution[0] / to_resolution[1]
     x1 = (clip.size[0] - (clip.size[1] * new_aspect_ratio)) // 2
     x2 = (clip.size[0] + (clip.size[1] * new_aspect_ratio)) // 2
     y1 = 0
     y2 = clip.size[1]
 
-    return clip.fx(crop, x1=x1, x2=x2, y1=y1, y2=y2)
+    clip = clip.fx(crop, x1=x1, x2=x2, y1=y1, y2=y2)
+    clip = clip.fx(resize, to_resolution)
+    return clip
 
 
 def generate_video(
     text: str, resolution: Tuple[int, int], filename: str, language: str = "english"
 ) -> None:
     # print("SKIPPING GENERATING AUDIO")
-    openaitest = OpenAiInterface()
+    openaiinterface = OpenAiInterface()
     print("generating audio")
-    openaitest.generate_mp3(text, "tmp/audio.mp3")
+    openaiinterface.generate_mp3(text, "tmp/audio.mp3")
 
     audio_clip: AudioClip = AudioFileClip("tmp/audio.mp3")
     audio_clip.write_audiofile("tmp/audio.wav")
@@ -154,16 +161,15 @@ def generate_video(
     combined_text_clip: VideoClip = generate_combined_text_clip(
         text, resolution, "tmp/audio.TextGrid"
     )
+    combined_text_clip = combined_text_clip.with_audio(audio_clip)
 
     backgroundVideo: VideoClip = select_background_video(
         combined_text_clip.duration + 0.75
     )
-    backgroundVideo = crop_to_center(backgroundVideo, resolution[0] / resolution[1])
-    backgroundVideo = backgroundVideo.fx(resize, resolution)
+    backgroundVideo = crop_to_center_and_resize(backgroundVideo, resolution)
 
     result: VideoClip = CompositeVideoClip([backgroundVideo, combined_text_clip])
 
-    result = result.with_audio(audio_clip)
     result.write_videofile(FINISHED_VIDEO_PATH + filename + ".mp4", fps=25, threads=threads, preset="veryfast") #TODO threads and preset dont seem to do anything
 
 
@@ -217,3 +223,33 @@ def parse_textgrid(filename, text_segments: list[str]):
             timestamps[index - 1].to_time = timestamps[index].from_time - 0.01
 
     return timestamps
+
+
+def generate_comments_clip(comments: list[Comment], resolution: Tuple[int, int]) -> VideoClip:
+    
+    text_clips: list[VideoClip] = []
+    openaiinterface = OpenAiInterface()
+    
+    for index, comment in enumerate(comments):
+        print(comment)
+        openaiinterface.generate_mp3(comment.body, f"tmp/audio-{index}.mp3")
+        clip: VideoClip = TextClip(
+            comment.body,
+            size=(resolution[0] * 0.8, 0),
+            color="white",
+            font="Arial-Black",
+            font_size=70,
+            method="caption",
+            stroke_color="black",
+            stroke_width=3,
+            align="center",
+        )
+        audio_clip = AudioFileClip(f"tmp/audio-{index}.mp3")
+        clip = clip.with_duration(audio_clip.duration)
+        clip = clip.with_audio(audio_clip)
+        text_clips.append(clip)
+        
+
+    combined_text_video: VideoClip = concatenate_videoclips(text_clips)
+    combined_text_video = combined_text_video.with_position("center")
+    return combined_text_video

@@ -10,3 +10,4 @@ idk,I don't know
 IDK,I don't know
  + , plus 
 &amp;, and 
+**,

@@ -1,10 +1,15 @@
 import json
 from random import randrange
 import datetime
+import re
 
 from typing import Literal, Tuple
-from moviepy_interface import generate_video
+
+from moviepy import AudioFileClip, CompositeVideoClip, TextClip, VideoClip, concatenate_videoclips
+from moviepy_interface import generate_comments_clip, generate_video, crop_to_center_and_resize, select_background_video
+from openai_interface import OpenAiInterface
 from reddit_requests import Post, PostSearch, Comment, create_post_from_post_id
+from moviepy.video.fx import resize, crop
 
 
 with open("config/reddit_threads.json") as file:
@@ -62,16 +67,37 @@ def generate_post_video(
     generate_video(post.selftext, (1920, 1080), filename)
 
 
-# generate_post_video("17pdufg")
-# for i in range(3):
-# generate_story_video("month", "top", f"vid_{i}.mp4")
+def generate_comment_video(
+    post_id: str, filename: str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+):
+    selected_post = create_post_from_post_id(post_id)
+
+    comments: list[Comment] = selected_post.get_good_comments()
+    print(f"There are {len(comments)} good comments")
 
 
-generate_post_video("17j7yoo")
+    resolution = (1920, 1080)
+    
+    #TODO determine font size based on text length
+    #TODO maybe make two screen if text is too long
+    #TODO cleanup tmp folder
+    #TODO background video audio level
+    #TODO background video audio in story videos missing
+    
+    
+    # for comment in comments[0].load_comment_chain(3):
+    # print(comment)
+    
+    comments_text_video: VideoClip = generate_comments_clip(comments[:3], resolution)
+    background_video: VideoClip = select_background_video(comments_text_video.duration)
+    background_video = crop_to_center_and_resize(background_video, resolution)
+    comments_text_video = CompositeVideoClip([background_video, comments_text_video])
+    comments_text_video.write_videofile(filename + ".mp4", fps=25)
+    
+    
+
+# generate_post_video("17j7yoo")
 # generate_story_video("month", "top")
+generate_comment_video("180rjhn")
 
-# p: Post = create_post_from_post_id("17r46je")
-# comments: list[Comment] = p.get_good_comments()
 
-# for comment in comments[0].load_comment_chain(3):
-#     print(comment)

@@ -62,57 +62,9 @@ class Post:
         self.url: str = get_parameter(post, "url")
         self.comments: list[Comment] = []
 
-        self.tidy_up_post()
-
-    def tidy_up_post(self):
-        # print(self.selftext)
-        to_remove = ["\nedit", "*edit", "\ntldr", "\ntl;dr", "update:"]
-        for phrase in to_remove:
-            if phrase in self.selftext.lower():
-                edit_position = self.selftext.lower().index(phrase)
-                if edit_position > len(self.selftext) * 0.4:
-                    print(f"removing {phrase.strip()}")
-                    self.selftext = self.selftext[0:edit_position]
-
-        self.selftext = " ".join(self.selftext.split())
-        self.selftext = self.selftext.replace(" , ", ", ")
-        self.selftext = self.selftext.replace(" . ", ". ")
-        self.selftext = self.selftext.replace("“", "\"")
-        self.selftext = emoji.replace_emoji(self.selftext, "")
-
-        for match in re.findall('[a-zA-Z]+"[a-zA-Z]+', self.selftext):
-            replace_with = " ".join(match.split('"'))
-            self.selftext = self.selftext.replace(match, replace_with)
-            print(f"replacing {match} with {replace_with}")
-            
-        for match in re.findall('[a-zA-Z]\(', self.selftext):
-            replace_with = " (".join(match.split('('))
-            self.selftext = self.selftext.replace(match, replace_with)
-            print(f"replacing {match} with {replace_with}")
-            
-        for match in re.findall('\)[a-zA-Z]', self.selftext):
-            replace_with = ") ".join(match.split(')'))
-            self.selftext = self.selftext.replace(match, replace_with)
-            print(f"replacing {match} with {replace_with}")
-
-        # for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', self.selftext):
-        #     replace_with = " ".join(match.split("-"))
-        #     self.selftext = self.selftext.replace(match, replace_with)
-        #     print(f"replacing {match} with {replace_with}")
-
-        with open("config/replace_in_text.txt") as file:
-            for line in file.readlines():
-                line = line.strip("\n")
-                replace_from, replace_to = line.split(",")
-                # print(f"replacing \"{replace_from}\" with \"{replace_to}\"")
-                self.selftext = self.selftext.replace(replace_from, replace_to)
-
-        # print(self.post_id)
-        print(self.selftext)
-
+        self.selftext = text_cleanup(self.selftext)
 
     def get_good_comments(self, score_threshold: int = 100):
-
         if len(self.comments) == 0:
             self.load_comments("top")
 
@@ -123,10 +75,13 @@ class Post:
             print(
                 f"{index}, : Comment from {comment.author} has {comment.score} score. This comment chain has a combined {chain_score}"
             )
-            
 
-        return list(filter(lambda comment: calc_chain_score(comment) > score_threshold, self.comments))
-
+        return list(
+            filter(
+                lambda comment: calc_chain_score(comment) > score_threshold,
+                self.comments,
+            )
+        )
 
 
 class Comment:
@@ -148,6 +103,8 @@ class Comment:
         self.downvotes: int = int(get_parameter(comment, "downs"))
         self.score: int = int(get_parameter(comment, "score"))
         self.gilded: int = int(get_parameter(comment, "gilded"))
+        
+        self.body = text_cleanup(self.body)
 
 
 def create_post_from_post_id(post_id: str) -> Post:
@@ -191,10 +148,62 @@ def get_parameter(data, parameter):
 
 
 def calc_chain_score(comment: Comment, skip_first: bool = True) -> int:
-
     sum = comment.score
 
     for reply in comment.replies:
         sum += calc_chain_score(reply, False)
 
     return sum
+
+
+def text_cleanup(text: str) -> str:
+    to_remove = ["\nedit", "*edit", "\ntldr", "\ntl;dr", "update:"]
+    for phrase in to_remove:
+        if phrase in text.lower():
+            edit_position = text.lower().index(phrase)
+            if edit_position > len(text) * 0.4:
+                print(f"removing {phrase.strip()}")
+                text = text[0:edit_position]
+
+    text = " ".join(text.split())
+    text = text.replace(" , ", ", ")
+    text = text.replace(" . ", ". ")
+    text = text.replace("“", '"')
+    text = emoji.replace_emoji(text, "")
+
+    for match in re.findall('[a-zA-Z]+"[a-zA-Z]+', text):
+        replace_with = " ".join(match.split('"'))
+        text = text.replace(match, replace_with)
+        print(f"replacing {match} with {replace_with}")
+
+    for match in re.findall("[a-zA-Z]\(", text):
+        replace_with = " (".join(match.split("("))
+        text = text.replace(match, replace_with)
+        print(f"replacing {match} with {replace_with}")
+
+    for match in re.findall("\)[a-zA-Z]", text):
+        replace_with = ") ".join(match.split(")"))
+        text = text.replace(match, replace_with)
+        print(f"replacing {match} with {replace_with}")
+
+    # markdown links
+    for match in re.findall("(\[([^\]]+)\]\((\S+(?=\)))\))", text):
+        replace_with = match[1]
+        print(f"replacing {match[0]} with {replace_with}")
+        text = text.replace(match[0], match[1])
+
+    # for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', text):
+    #     replace_with = " ".join(match.split("-"))
+    #     text = text.replace(match, replace_with)
+    #     print(f"replacing {match} with {replace_with}")
+
+    with open("config/replace_in_text.txt") as file:
+        for line in file.readlines():
+            line = line.strip("\n")
+            replace_from, replace_to = line.split(",")
+            # print(f"replacing \"{replace_from}\" with \"{replace_to}\"")
+            text = text.replace(replace_from, replace_to)
+
+    # print(self.post_id)
+    print(text)
+    return text
