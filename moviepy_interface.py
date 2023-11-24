@@ -12,6 +12,8 @@ import string
 from reddit_requests import Comment
 import re
 
+from text_processing import split_text_to_max_x_chars
+
 
 class Timestamp:
     def __init__(self, text: str, from_time: float, to_time: float) -> None:
@@ -109,12 +111,16 @@ def select_background_video(min_length: int, max_attempts: int = 10) -> VideoCli
 
     if min_length > clip.duration:
         if max_attempts > 0:
-            print(f"retrying for background video since it isn't long enough: Attempts left: {max_attempts}")
+            print(
+                f"retrying for background video since it isn't long enough: Attempts left: {max_attempts}"
+            )
             clip = select_background_video(min_length, max_attempts - 1)
         else:
             raise Exception("No suitable background video found")
 
-    print(f"clip duration {clip.duration} and min_length {min_length} combined: {floor(clip.duration - min_length)}")
+    print(
+        f"clip duration {clip.duration} and min_length {min_length} combined: {floor(clip.duration - min_length)}"
+    )
     start_time = randint(0, floor(clip.duration - min_length))
     end_time = start_time + min_length
 
@@ -170,7 +176,12 @@ def generate_video(
 
     result: VideoClip = CompositeVideoClip([backgroundVideo, combined_text_clip])
 
-    result.write_videofile(FINISHED_VIDEO_PATH + filename + ".mp4", fps=25, threads=threads, preset="veryfast") #TODO threads and preset dont seem to do anything
+    result.write_videofile(
+        FINISHED_VIDEO_PATH + filename + ".mp4",
+        fps=25,
+        threads=threads,
+        preset="veryfast",
+    )  # TODO threads and preset dont seem to do anything
 
 
 def align_audio_and_text(audiofile: str, textfile: str, language: str):
@@ -195,7 +206,9 @@ def parse_textgrid(filename, text_segments: list[str]):
     tg = textgrid.TextGrid.fromFile(filename)
     # tg[0] is the list of words
     # filter to remove pauses
-    filtered_tg = filter(lambda x: not x.mark == "" and not x.mark.startswith("<"), tg[0])
+    filtered_tg = filter(
+        lambda x: not x.mark == "" and not x.mark.startswith("<"), tg[0]
+    )
     filtered_tg = list(filtered_tg)
     print(f"filtered_tg is {len(filtered_tg)} long ")
 
@@ -206,15 +219,19 @@ def parse_textgrid(filename, text_segments: list[str]):
     timestamps: list[Timestamp] = []
     for index, segment in enumerate(text_segments[:-1]):
         from_index = sum(len(s.split()) for s in text_segments[:index])
-        to_index = sum(len(s.split()) for s in text_segments[:index + 1])
+        to_index = sum(len(s.split()) for s in text_segments[: index + 1])
         start_time = filtered_tg[from_index].minTime
         end_time = filtered_tg[to_index].maxTime
         # print(f"from_index {from_index}={words[from_index]}, to_index {to_index}={words[to_index]}")
         timestamps.append(Timestamp(segment, start_time, end_time))
 
-    last_timestamp_start_time = filtered_tg[sum(len(s.split()) for s in text_segments[:-1])].minTime
+    last_timestamp_start_time = filtered_tg[
+        sum(len(s.split()) for s in text_segments[:-1])
+    ].minTime
     last_timestamp_end_time = filtered_tg[-1].maxTime
-    timestamps.append(Timestamp(text_segments[-1], last_timestamp_start_time, last_timestamp_end_time))
+    timestamps.append(
+        Timestamp(text_segments[-1], last_timestamp_start_time, last_timestamp_end_time)
+    )
 
     # making sure the timestamps dont overlap
     for index in range(1, len(timestamps)):
@@ -225,30 +242,62 @@ def parse_textgrid(filename, text_segments: list[str]):
     return timestamps
 
 
-def generate_comments_clip(comments: list[Comment], resolution: Tuple[int, int]) -> VideoClip:
-    
-    text_clips: list[VideoClip] = []
+def calculate_font_size(text: str) -> Tuple[list[str], list[int]]:
+
+    text_parts: list[str] = split_text_to_max_x_chars(text, 550)
+    font_sizes: list[int] = []
+
+    for part in text_parts:
+        if len(part) > 400:
+            font_sizes.append(45)
+        elif len(part) > 200:
+            font_sizes.append(50)
+        else:
+            font_sizes.append(70)
+
+    return (text_parts, font_sizes)
+
+
+def generate_single_comment_clip(text_parts: list[str], font_sizes: list[int], resolution: Tuple[int, int], index: int):
     openaiinterface = OpenAiInterface()
+    comment_clip_parts: list[VideoClip] = []
     
-    for index, comment in enumerate(comments):
-        print(comment)
-        openaiinterface.generate_mp3(comment.body, f"tmp/audio-{index}.mp3")
-        clip: VideoClip = TextClip(
-            comment.body,
+    for i, part in enumerate(text_parts):
+        openaiinterface.generate_mp3(part, f"tmp/audio-{index}-part-{i}.mp3")
+        # clip_parts.append()
+        clip_part: VideoClip = TextClip(
+            part,
             size=(resolution[0] * 0.8, 0),
             color="white",
             font="Arial-Black",
-            font_size=70,
+            font_size=font_sizes[i],
             method="caption",
             stroke_color="black",
             stroke_width=3,
-            align="center",
-        )
-        audio_clip = AudioFileClip(f"tmp/audio-{index}.mp3")
-        clip = clip.with_duration(audio_clip.duration)
-        clip = clip.with_audio(audio_clip)
-        text_clips.append(clip)
-        
+            align="center")
+            
+        audio_clip = AudioFileClip(f"tmp/audio-{index}-part-{i}.mp3")
+        clip_part = clip_part.with_duration(audio_clip.duration)
+        clip_part = clip_part.with_audio(audio_clip)
+        comment_clip_parts.append(clip_part)
+
+    comment_clip = concatenate_videoclips(comment_clip_parts)
+    return comment_clip
+
+def generate_comments_clip(
+    comments: list[Comment], resolution: Tuple[int, int]
+) -> VideoClip:
+    text_clips: list[VideoClip] = []
+
+    for index, comment in enumerate(comments):
+        print(comment)
+
+        text_parts, font_sizes = calculate_font_size(comment.body)
+        if len(text_parts) > 1:
+            print(f"Splitting Comment into {len(text_parts)} parts")
+
+        comment_clip = generate_single_comment_clip(text_parts, font_sizes, resolution, index)
+        text_clips.append(comment_clip)
 
     combined_text_video: VideoClip = concatenate_videoclips(text_clips)
     combined_text_video = combined_text_video.with_position("center")

@@ -7,6 +7,8 @@ from PIL import Image
 from io import BytesIO
 import base64
 
+from text_processing import split_text_to_max_x_chars
+
 
 class OpenAiInterface:
     def __init__(self) -> None:
@@ -41,16 +43,6 @@ class OpenAiInterface:
 
         print(image_url)
 
-    def split_text_to_max_4096_chars(self, text: str) -> list[str]:
-        if len(text) > 4096:
-            first_part = text[0:4096]
-            period_index = first_part.rindex(".")
-            first_part = text[0:period_index]
-            return [first_part] + self.split_text_to_max_4096_chars(text[period_index:])
-        else:
-            return [text]
-
-
     def generate_mp3(self, 
                        text: str, 
                        filepath: str,
@@ -60,7 +52,7 @@ class OpenAiInterface:
         filename = filepath[:filepath.index(".")]
         ext = filepath[filepath.index(".")+1:]
         
-        text_segments: list[str] = self.split_text_to_max_4096_chars(text)
+        text_segments: list[str] = split_text_to_max_x_chars(text, 4096)
         
         if len(text_segments) < 2:
             response = self.client.audio.speech.create(

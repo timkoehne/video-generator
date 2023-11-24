@@ -1,8 +1,7 @@
 from typing import Tuple
 import requests
-import json
-import emoji
-import re
+
+from text_processing import text_cleanup
 
 useragent = "yourbot"
 
@@ -45,7 +44,7 @@ class Post:
                 self.comments.append(Comment(comment))
         except Exception as e:
             print(
-                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
+                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}" #ignore: error
             )
             print("an error cccured while searching for comments")
 
@@ -95,10 +94,14 @@ class Comment:
             chain += self.replies[0].load_comment_chain(depth - 1)
         return chain
 
-    def __init__(self, comment) -> None:
+    def __init__(self, comment, ignore_replies = False) -> None:
         self.author: str = get_parameter(comment, "author")
         self.body: str = get_parameter(comment, "body")
-        self.replies: list[Comment] = handle_replies(get_parameter(comment, "replies"))
+        if ignore_replies:
+            print("ignoring replies")
+            self.replies = []
+        else:
+            self.replies: list[Comment] = handle_replies(get_parameter(comment, "replies"))
         self.upvotes: int = int(get_parameter(comment, "ups"))
         self.downvotes: int = int(get_parameter(comment, "downs"))
         self.score: int = int(get_parameter(comment, "score"))
@@ -154,56 +157,3 @@ def calc_chain_score(comment: Comment, skip_first: bool = True) -> int:
         sum += calc_chain_score(reply, False)
 
     return sum
-
-
-def text_cleanup(text: str) -> str:
-    to_remove = ["\nedit", "*edit", "\ntldr", "\ntl;dr", "update:"]
-    for phrase in to_remove:
-        if phrase in text.lower():
-            edit_position = text.lower().index(phrase)
-            if edit_position > len(text) * 0.4:
-                print(f"removing {phrase.strip()}")
-                text = text[0:edit_position]
-
-    text = " ".join(text.split())
-    text = text.replace(" , ", ", ")
-    text = text.replace(" . ", ". ")
-    text = text.replace("“", '"')
-    text = emoji.replace_emoji(text, "")
-
-    for match in re.findall('[a-zA-Z]+"[a-zA-Z]+', text):
-        replace_with = " ".join(match.split('"'))
-        text = text.replace(match, replace_with)
-        print(f"replacing {match} with {replace_with}")
-
-    for match in re.findall("[a-zA-Z]\(", text):
-        replace_with = " (".join(match.split("("))
-        text = text.replace(match, replace_with)
-        print(f"replacing {match} with {replace_with}")
-
-    for match in re.findall("\)[a-zA-Z]", text):
-        replace_with = ") ".join(match.split(")"))
-        text = text.replace(match, replace_with)
-        print(f"replacing {match} with {replace_with}")
-
-    # markdown links
-    for match in re.findall("(\[([^\]]+)\]\((\S+(?=\)))\))", text):
-        replace_with = match[1]
-        print(f"replacing {match[0]} with {replace_with}")
-        text = text.replace(match[0], match[1])
-
-    # for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', text):
-    #     replace_with = " ".join(match.split("-"))
-    #     text = text.replace(match, replace_with)
-    #     print(f"replacing {match} with {replace_with}")
-
-    with open("config/replace_in_text.txt") as file:
-        for line in file.readlines():
-            line = line.strip("\n")
-            replace_from, replace_to = line.split(",")
-            # print(f"replacing \"{replace_from}\" with \"{replace_to}\"")
-            text = text.replace(replace_from, replace_to)
-
-    # print(self.post_id)
-    print(text)
-    return text
