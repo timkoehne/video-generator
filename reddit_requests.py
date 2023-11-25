@@ -1,4 +1,5 @@
-from typing import Tuple
+from random import randrange
+from typing import Literal, Tuple
 import requests
 
 from text_processing import text_cleanup
@@ -44,7 +45,7 @@ class Post:
                 self.comments.append(Comment(comment))
         except Exception as e:
             print(
-                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}" #ignore: error
+                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"  # ignore: error
             )
             print("an error cccured while searching for comments")
 
@@ -63,24 +64,39 @@ class Post:
 
         self.selftext = text_cleanup(self.selftext)
 
-    def get_good_comments(self, score_threshold: int = 100):
+    def get_good_comments(
+        self, score_threshold: int = 100, num_chars_to_limit_comments: int = 5000
+    ):
         if len(self.comments) == 0:
             self.load_comments("top")
 
-        print(f"there are {len(self.comments)} comments")
+        print(f"There are {len(self.comments)} comments")
+
         for index, comment in enumerate(self.comments):
             chain_score = calc_chain_score(comment)
-
             print(
                 f"{index}, : Comment from {comment.author} has {comment.score} score. This comment chain has a combined {chain_score}"
             )
 
-        return list(
+        # TODO filter removed comments
+
+        filtered_comments = list(
             filter(
                 lambda comment: calc_chain_score(comment) > score_threshold,
                 self.comments,
             )
-        )
+        )[:-1]
+        print(f"After score filtering there are {len(filtered_comments)} comments left")
+
+        for index, comment in enumerate(filtered_comments):
+            if num_chars_to_limit_comments - len(comment.body) < 0:
+                filtered_comments = filtered_comments[:index]
+                break
+            num_chars_to_limit_comments -= len(comment.body)
+            print(num_chars_to_limit_comments)
+
+        print(f"Limiting to {len(filtered_comments)} comments")
+        return filtered_comments
 
 
 class Comment:
@@ -94,19 +110,21 @@ class Comment:
             chain += self.replies[0].load_comment_chain(depth - 1)
         return chain
 
-    def __init__(self, comment, ignore_replies = False) -> None:
+    def __init__(self, comment, ignore_replies=False) -> None:
         self.author: str = get_parameter(comment, "author")
         self.body: str = get_parameter(comment, "body")
         if ignore_replies:
             print("ignoring replies")
             self.replies = []
         else:
-            self.replies: list[Comment] = handle_replies(get_parameter(comment, "replies"))
+            self.replies: list[Comment] = handle_replies(
+                get_parameter(comment, "replies")
+            )
         self.upvotes: int = int(get_parameter(comment, "ups"))
         self.downvotes: int = int(get_parameter(comment, "downs"))
         self.score: int = int(get_parameter(comment, "score"))
         self.gilded: int = int(get_parameter(comment, "gilded"))
-        
+
         self.body = text_cleanup(self.body)
 
 
@@ -157,3 +175,27 @@ def calc_chain_score(comment: Comment, skip_first: bool = True) -> int:
         sum += calc_chain_score(reply, False)
 
     return sum
+
+
+def find_post(
+    timeframe: Literal["day", "week", "month", "year", "all"],
+    listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
+    subreddit_list: list[str],
+):
+    with open("config/already_posted.txt", "r") as file:
+        already_posted_ids = file.read().splitlines()
+
+    maxAttempts = 50
+    while True:
+        subreddit = subreddit_list[randrange(0, len(subreddit_list))]
+        search = PostSearch(subreddit, listing, timeframe)
+        selected_post = search.posts[randrange(0, len(search.posts))]
+        # TODO check if this is a valid post: post body length
+
+        if not selected_post.post_id in already_posted_ids:
+            break
+        else:
+            maxAttempts -= 1
+            if maxAttempts <= 0:
+                raise Exception(f"No valid post found in {maxAttempts} attempts.")
+    return selected_post

@@ -9,7 +9,7 @@ from openai_interface import OpenAiInterface
 import subprocess
 import textgrid
 import string
-from reddit_requests import Comment
+from reddit_requests import Comment, Post
 import re
 
 from text_processing import split_text_to_max_x_chars
@@ -23,15 +23,12 @@ class Timestamp:
 
 
 BACKGROUND_VIDEO_PATH = "f:/background_videos/"
-FINISHED_VIDEO_PATH = "C:/Users/Tim/Desktop/finished_videos/"
 POSSIBLE_FILE_ENDINGS = (".mp4", ".webm", ".mkv", ".ogv", ".mpeg", ".avi", ".mov")
 
 mfa_dictionary_names = {
     "english": ["english_us_arpa", "english_us_arpa"],
     "german": ["german_mfa", "german_mfa"],
 }
-
-threads = 16
 
 
 def generate_text_clip(text: str, size: Tuple[float, float]):
@@ -146,9 +143,11 @@ def crop_to_center_and_resize(clip: VideoClip, to_resolution: Tuple[int, int]):
     return clip
 
 
-def generate_video(
-    text: str, resolution: Tuple[int, int], filename: str, language: str = "english"
-) -> None:
+def generate_story_clip(
+    post: Post, resolution: Tuple[int, int], language: str = "english"
+) -> VideoClip:
+    text: str = post.selftext
+
     # print("SKIPPING GENERATING AUDIO")
     openaiinterface = OpenAiInterface()
     print("generating audio")
@@ -175,13 +174,7 @@ def generate_video(
     backgroundVideo = crop_to_center_and_resize(backgroundVideo, resolution)
 
     result: VideoClip = CompositeVideoClip([backgroundVideo, combined_text_clip])
-
-    result.write_videofile(
-        FINISHED_VIDEO_PATH + filename + ".mp4",
-        fps=25,
-        threads=threads,
-        preset="veryfast",
-    )  # TODO threads and preset dont seem to do anything
+    return result
 
 
 def align_audio_and_text(audiofile: str, textfile: str, language: str):
@@ -243,7 +236,6 @@ def parse_textgrid(filename, text_segments: list[str]):
 
 
 def calculate_font_size(text: str) -> Tuple[list[str], list[int]]:
-
     text_parts: list[str] = split_text_to_max_x_chars(text, 550)
     font_sizes: list[int] = []
 
@@ -258,10 +250,15 @@ def calculate_font_size(text: str) -> Tuple[list[str], list[int]]:
     return (text_parts, font_sizes)
 
 
-def generate_single_comment_clip(text_parts: list[str], font_sizes: list[int], resolution: Tuple[int, int], index: int):
+def generate_single_comment_clip(
+    text_parts: list[str],
+    font_sizes: list[int],
+    resolution: Tuple[int, int],
+    index: int,
+):
     openaiinterface = OpenAiInterface()
     comment_clip_parts: list[VideoClip] = []
-    
+
     for i, part in enumerate(text_parts):
         openaiinterface.generate_mp3(part, f"tmp/audio-{index}-part-{i}.mp3")
         # clip_parts.append()
@@ -274,8 +271,9 @@ def generate_single_comment_clip(text_parts: list[str], font_sizes: list[int], r
             method="caption",
             stroke_color="black",
             stroke_width=3,
-            align="center")
-            
+            align="center",
+        )
+
         audio_clip = AudioFileClip(f"tmp/audio-{index}-part-{i}.mp3")
         clip_part = clip_part.with_duration(audio_clip.duration)
         clip_part = clip_part.with_audio(audio_clip)
@@ -284,10 +282,12 @@ def generate_single_comment_clip(text_parts: list[str], font_sizes: list[int], r
     comment_clip = concatenate_videoclips(comment_clip_parts)
     return comment_clip
 
-def generate_comments_clip(
-    comments: list[Comment], resolution: Tuple[int, int]
-) -> VideoClip:
+
+def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     text_clips: list[VideoClip] = []
+
+    comments: list[Comment] = post.get_good_comments()
+    print(f"There are {len(comments)} good comments")
 
     for index, comment in enumerate(comments):
         print(comment)
@@ -296,9 +296,14 @@ def generate_comments_clip(
         if len(text_parts) > 1:
             print(f"Splitting Comment into {len(text_parts)} parts")
 
-        comment_clip = generate_single_comment_clip(text_parts, font_sizes, resolution, index)
+        comment_clip = generate_single_comment_clip(
+            text_parts, font_sizes, resolution, index
+        )
         text_clips.append(comment_clip)
-
     combined_text_video: VideoClip = concatenate_videoclips(text_clips)
     combined_text_video = combined_text_video.with_position("center")
-    return combined_text_video
+
+    background_video: VideoClip = select_background_video(combined_text_video.duration)
+    background_video = crop_to_center_and_resize(background_video, resolution)
+    result = CompositeVideoClip([background_video, combined_text_video])
+    return result

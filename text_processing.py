@@ -6,12 +6,12 @@ def split_text_to_max_x_chars(text: str, x: int) -> list[str]:
     if len(text) > x:
         first_part = text[0:x]
         period_index = first_part.rindex(".")
-        first_part = text[0:period_index + 1]
-        return [first_part] + split_text_to_max_x_chars(text[period_index + 1:], x)
+        first_part = text[0 : period_index + 1]
+        return [first_part] + split_text_to_max_x_chars(text[period_index + 1 :], x)
     else:
         return [text]
-    
-    
+
+
 def text_cleanup(text: str) -> str:
     to_remove = ["\nedit", "*edit", "\ntldr", "\ntl;dr", "update:"]
     for phrase in to_remove:

@@ -1,56 +1,40 @@
+from enum import Enum
 import json
-from random import randrange
 import datetime
-import re
-
 from typing import Literal, Tuple
+from moviepy import VideoClip
+from moviepy_interface import generate_comments_clip, generate_story_clip
+from reddit_requests import create_post_from_post_id, find_post
 
-from moviepy import (
-    AudioFileClip,
-    CompositeVideoClip,
-    TextClip,
-    VideoClip,
-    concatenate_videoclips,
-)
-from moviepy_interface import (
-    generate_comments_clip,
-    generate_video,
-    crop_to_center_and_resize,
-    select_background_video,
-)
-from openai_interface import OpenAiInterface
-from reddit_requests import Post, PostSearch, Comment, create_post_from_post_id
-from moviepy.video.fx import resize, crop
 
+class VideoType:
+    def __init__(self, name: str, generator_function) -> None:
+        self.name = name
+        self.generator_function = generator_function
+
+
+class VideoTypeEnum(Enum):
+    STORY = VideoType("story_based", generate_story_clip)
+    COMMENT = VideoType("comment_based", generate_comments_clip)
+
+
+FINISHED_VIDEO_PATH = "C:/Users/Tim/Desktop/finished_videos/"
+threads = 16
 
 with open("config/reddit_threads.json") as file:
     reddit_threads = json.loads(file.read())
 
 
-def generate_story_video(
+def generate_video(
+    video_type: VideoTypeEnum,
+    resolution: Tuple[int, int],
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
     filename: str = datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
 ):
     with open("config/already_posted.txt", "r") as file:
         already_posted_ids = file.read().splitlines()
-
-    maxAttempts = 50
-    while True:
-        subreddit = reddit_threads["story_based"][
-            randrange(0, len(reddit_threads["story_based"]))
-        ]
-        search = PostSearch(subreddit, listing, timeframe)
-        selected_post = search.posts[randrange(0, len(search.posts))]
-        # TODO check if this is a valid post: post body length
-
-        if not selected_post.post_id in already_posted_ids:
-            break
-        else:
-            maxAttempts -= 1
-            if maxAttempts <= 0:
-                raise Exception(f"No valid post found in {maxAttempts} attempts.")
-
+    selected_post = find_post(timeframe, listing, reddit_threads[video_type.value.name])
     already_posted_ids.append(selected_post.post_id)
     with open("config/already_posted.txt", "w") as file:
         for id in already_posted_ids:
@@ -58,7 +42,14 @@ def generate_story_video(
     print(f'selected post titled "{selected_post.title}"')
     print(f"saving post_id {selected_post.post_id} as selected")
 
-    generate_video(selected_post.selftext, (1920, 1080), filename)
+    video: VideoClip = video_type.value.generator_function(selected_post, resolution)
+
+    video.write_videofile(
+        FINISHED_VIDEO_PATH + filename + ".mp4",
+        fps=25,
+        threads=threads,
+        preset="veryfast",
+    )
 
 
 def generate_post_video(
@@ -75,29 +66,8 @@ def generate_post_video(
     print(f'selected post titled "{post.title}"')
     print(f"saving post_id {post.post_id} as selected")
 
-    generate_video(post.selftext, (1920, 1080), filename)
+    generate_story_clip(post, (1920, 1080), filename)
 
 
-def generate_comment_video(
-    post_id: str, filename: str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-):
-    selected_post = create_post_from_post_id(post_id)
-
-    comments: list[Comment] = selected_post.get_good_comments()
-    print(f"There are {len(comments)} good comments")
-
-    resolution = (1920, 1080)
-    # TODO cleanup tmp folder
-    # for comment in comments[0].load_comment_chain(3):
-    # print(comment)
-
-    comments_text_video: VideoClip = generate_comments_clip(comments, resolution)
-    background_video: VideoClip = select_background_video(comments_text_video.duration)
-    background_video = crop_to_center_and_resize(background_video, resolution)
-    comments_text_video = CompositeVideoClip([background_video, comments_text_video])
-    comments_text_video.write_videofile(filename + ".mp4", fps=25)
-
-
-# generate_post_video("17j8whz")
-# generate_story_video("month", "top")
-generate_comment_video("180rjhn")
+# generate_video(VideoTypeEnum.STORY, "month", "top")
+generate_video(VideoTypeEnum.COMMENT, (1080, 1920), "month", "top")
