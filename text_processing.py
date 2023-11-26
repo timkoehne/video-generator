@@ -42,6 +42,11 @@ def text_cleanup(text: str) -> str:
         text = text.replace(match, replace_with)
         print(f"replacing {match} with {replace_with}")
 
+    for match in re.findall("[a-zA-Z],[a-zA-Z]", text):
+        replace_with = ", ".join(match.split(","))
+        text = text.replace(match, replace_with)
+        print(f"replacing {match} with {replace_with}")
+
     # markdown links
     for match in re.findall("(\[([^\]]+)\]\((\S+(?=\)))\))", text):
         replace_with = match[1]

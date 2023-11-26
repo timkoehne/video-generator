@@ -45,7 +45,7 @@ class Post:
                 self.comments.append(Comment(comment))
         except Exception as e:
             print(
-                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"  # ignore: error
+                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}" # type: ignore
             )
             print("an error cccured while searching for comments")
 

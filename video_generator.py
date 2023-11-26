@@ -3,8 +3,9 @@ import json
 import datetime
 from typing import Literal, Tuple
 from moviepy import VideoClip
-from moviepy_interface import generate_comments_clip, generate_story_clip
 from reddit_requests import create_post_from_post_id, find_post
+from comment_based_video import generate_comments_clip
+from story_based_video import generate_story_clip
 
 
 class VideoType:
@@ -18,6 +19,7 @@ class VideoTypeEnum(Enum):
     COMMENT = VideoType("comment_based", generate_comments_clip)
 
 
+DEFAULT_FILE_NAME = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 FINISHED_VIDEO_PATH = "C:/Users/Tim/Desktop/finished_videos/"
 threads = 16
 
@@ -30,7 +32,7 @@ def generate_video(
     resolution: Tuple[int, int],
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
-    filename: str = datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
+    filename: str = DEFAULT_FILE_NAME,
 ):
     with open("config/already_posted.txt", "r") as file:
         already_posted_ids = file.read().splitlines()
@@ -52,9 +54,7 @@ def generate_video(
     )
 
 
-def generate_post_video(
-    post_id: str, filename: str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-):
+def generate_post_video(post_id: str, filename: str = DEFAULT_FILE_NAME):
     post = create_post_from_post_id(post_id)
     with open("config/already_posted.txt", "r") as file:
         already_posted_ids = file.read().splitlines()
@@ -69,5 +69,10 @@ def generate_post_video(
     generate_story_clip(post, (1920, 1080), filename)
 
 
-# generate_video(VideoTypeEnum.STORY, "month", "top")
-generate_video(VideoTypeEnum.COMMENT, (1080, 1920), "month", "top")
+# generate_video(VideoTypeEnum.COMMENT, (1920, 1080), "month", "top")
+generate_video(VideoTypeEnum.STORY, (1920, 1080), "month", "top")
+
+# TODO create video of specific length
+# TODO delete tmp
+# TODO make this be able to run multiple instances at once
+# TODO add intro to video
