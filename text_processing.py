@@ -18,7 +18,7 @@ def text_cleanup(text: str) -> str:
         if phrase in text.lower():
             edit_position = text.lower().index(phrase)
             if edit_position > len(text) * 0.4:
-                print(f"removing {phrase.strip()}")
+                # print(f"removing {phrase.strip()}")
                 text = text[0:edit_position]
 
     text = " ".join(text.split())
@@ -30,27 +30,27 @@ def text_cleanup(text: str) -> str:
     for match in re.findall('[a-zA-Z]+"[a-zA-Z]+', text):
         replace_with = " ".join(match.split('"'))
         text = text.replace(match, replace_with)
-        print(f"replacing {match} with {replace_with}")
+        # print(f"replacing {match} with {replace_with}")
 
     for match in re.findall("[a-zA-Z]\(", text):
         replace_with = " (".join(match.split("("))
         text = text.replace(match, replace_with)
-        print(f"replacing {match} with {replace_with}")
+        # print(f"replacing {match} with {replace_with}")
 
     for match in re.findall("\)[a-zA-Z]", text):
         replace_with = ") ".join(match.split(")"))
         text = text.replace(match, replace_with)
-        print(f"replacing {match} with {replace_with}")
+        # print(f"replacing {match} with {replace_with}")
 
     for match in re.findall("[a-zA-Z],[a-zA-Z]", text):
         replace_with = ", ".join(match.split(","))
         text = text.replace(match, replace_with)
-        print(f"replacing {match} with {replace_with}")
+        # print(f"replacing {match} with {replace_with}")
 
     # markdown links
     for match in re.findall("(\[([^\]]+)\]\((\S+(?=\)))\))", text):
         replace_with = match[1]
-        print(f"replacing {match[0]} with {replace_with}")
+        # print(f"replacing {match[0]} with {replace_with}")
         text = text.replace(match[0], match[1])
 
     # for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', text):
@@ -66,5 +66,5 @@ def text_cleanup(text: str) -> str:
             text = text.replace(replace_from, replace_to)
 
     # print(self.post_id)
-    print(text)
+    # print(text)
     return text

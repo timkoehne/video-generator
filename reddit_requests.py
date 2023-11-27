@@ -1,5 +1,5 @@
 from random import randrange
-from typing import Literal, Tuple
+from typing import Literal
 import requests
 
 from text_processing import text_cleanup
@@ -45,7 +45,7 @@ class Post:
                 self.comments.append(Comment(comment))
         except Exception as e:
             print(
-                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}" # type: ignore
+                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"  # type: ignore
             )
             print("an error cccured while searching for comments")
 
@@ -124,6 +124,7 @@ class Comment:
         self.downvotes: int = int(get_parameter(comment, "downs"))
         self.score: int = int(get_parameter(comment, "score"))
         self.gilded: int = int(get_parameter(comment, "gilded"))
+        self.id: str = str(get_parameter(comment, "id"))
 
         self.body = text_cleanup(self.body)
 

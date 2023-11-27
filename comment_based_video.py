@@ -22,12 +22,12 @@ def calculate_font_size(text: str) -> Tuple[list[str], list[int]]:
     return (text_parts, font_sizes)
 
 
-def generate_comment_intro(title: str, resolution: Tuple[int, int]) -> VideoClip:
+def generate_comment_intro(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     openaiinterface = OpenAiInterface()
-    openaiinterface.generate_mp3(title, f"tmp/audio-intro.mp3")
+    openaiinterface.generate_mp3(post.title, f"tmp/{post.post_id}-audio-intro.mp3")
 
     intro_clip: VideoClip = TextClip(
-        title,
+        post.title,
         size=(resolution[0] * 0.8, 0),
         color="white",
         font="Arial-Black",
@@ -37,13 +37,14 @@ def generate_comment_intro(title: str, resolution: Tuple[int, int]) -> VideoClip
         stroke_width=3,
         align="center",
     )
-    audio_clip = AudioFileClip(f"tmp/audio-intro.mp3")
-    intro_clip = intro_clip.with_duration(audio_clip.duration + 1.5)
+    audio_clip = AudioFileClip(f"tmp/{post.post_id}-audio-intro.mp3")
+    intro_clip = intro_clip.with_duration(audio_clip.duration + 1.25)
     intro_clip = intro_clip.with_audio(audio_clip)
     return intro_clip
 
 
 def generate_single_comment_clip(
+    post: Post,
     text_parts: list[str],
     font_sizes: list[int],
     resolution: Tuple[int, int],
@@ -53,7 +54,9 @@ def generate_single_comment_clip(
     comment_clip_parts: list[VideoClip] = []
 
     for i, part in enumerate(text_parts):
-        openaiinterface.generate_mp3(part, f"tmp/audio-{index}-part-{i}.mp3")
+        openaiinterface.generate_mp3(
+            part, f"tmp/{post.post_id}-audio-{index}-part-{i}.mp3"
+        )
         # clip_parts.append()
         clip_part: VideoClip = TextClip(
             part,
@@ -67,7 +70,7 @@ def generate_single_comment_clip(
             align="center",
         )
 
-        audio_clip = AudioFileClip(f"tmp/audio-{index}-part-{i}.mp3")
+        audio_clip = AudioFileClip(f"tmp/{post.post_id}-audio-{index}-part-{i}.mp3")
         clip_part = clip_part.with_duration(audio_clip.duration + 1)
         clip_part = clip_part.with_audio(audio_clip)
         comment_clip_parts.append(clip_part)
@@ -78,7 +81,7 @@ def generate_single_comment_clip(
 
 def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     text_clips: list[VideoClip] = []
-    intro: VideoClip = generate_comment_intro(post.title, resolution)
+    intro: VideoClip = generate_comment_intro(post, resolution)
 
     comments: list[Comment] = post.get_good_comments()
     print(f"There are {len(comments)} good comments")
@@ -91,7 +94,7 @@ def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip
             print(f"Splitting Comment into {len(text_parts)} parts")
 
         comment_clip = generate_single_comment_clip(
-            text_parts, font_sizes, resolution, index
+            post, text_parts, font_sizes, resolution, index
         )
         text_clips.append(comment_clip)
     combined_text_video: VideoClip = concatenate_videoclips(text_clips)

@@ -1,6 +1,7 @@
 from enum import Enum
 import json
 import datetime
+import os
 from typing import Literal, Tuple
 from moviepy import VideoClip
 from reddit_requests import create_post_from_post_id, find_post
@@ -53,6 +54,10 @@ def generate_video(
         preset="veryfast",
     )
 
+    for f in os.listdir("tmp/"):
+        if f.startswith(f"{selected_post.post_id}"):
+            os.remove(f"tmp/{f}")
+
 
 def generate_post_video(post_id: str, filename: str = DEFAULT_FILE_NAME):
     post = create_post_from_post_id(post_id)
@@ -69,10 +74,7 @@ def generate_post_video(post_id: str, filename: str = DEFAULT_FILE_NAME):
     generate_story_clip(post, (1920, 1080), filename)
 
 
-# generate_video(VideoTypeEnum.COMMENT, (1920, 1080), "month", "top")
-generate_video(VideoTypeEnum.STORY, (1920, 1080), "month", "top")
+generate_video(VideoTypeEnum.COMMENT, (1920, 1080), "month", "top")
+# generate_video(VideoTypeEnum.STORY, (1920, 1080), "month", "top")
 
 # TODO create video of specific length
-# TODO delete tmp
-# TODO make this be able to run multiple instances at once
-# TODO add intro to video

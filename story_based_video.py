@@ -31,20 +31,22 @@ def generate_story_clip(
     # print("SKIPPING GENERATING AUDIO")
     openaiinterface = OpenAiInterface()
     print("generating audio")
-    openaiinterface.generate_mp3(text, "tmp/audio.mp3")
+    openaiinterface.generate_mp3(text, f"tmp/{post.post_id}-audio.mp3")
 
-    audio_clip: AudioClip = AudioFileClip("tmp/audio.mp3")
-    audio_clip.write_audiofile("tmp/audio.wav")
+    audio_clip: AudioClip = AudioFileClip(f"tmp/{post.post_id}-audio.mp3")
+    audio_clip.write_audiofile(f"tmp/{post.post_id}-audio.wav")
     print(f"the video will be {audio_clip.duration}s long")
 
-    with open("tmp/audio.txt", "w", encoding="utf-8") as file:
+    with open(f"tmp/{post.post_id}-audio.txt", "w", encoding="utf-8") as file:
         exclude = set(string.punctuation)
         file.write("".join(char for char in text if char not in exclude))
 
-    align_audio_and_text("tmp/audio.wav", "tmp/audio.txt", language)
+    align_audio_and_text(
+        f"tmp/{post.post_id}-audio.wav", f"tmp/{post.post_id}-audio.txt", language
+    )
 
     combined_text_clip: VideoClip = generate_combined_text_clip(
-        text, resolution, "tmp/audio.TextGrid"
+        text, resolution, f"tmp/{post.post_id}-audio.TextGrid"
     )
     combined_text_clip = combined_text_clip.with_audio(audio_clip)
 
@@ -54,6 +56,7 @@ def generate_story_clip(
     backgroundVideo = crop_to_center_and_resize(backgroundVideo, resolution)
 
     result: VideoClip = CompositeVideoClip([backgroundVideo, combined_text_clip])
+
     return result
 
 
