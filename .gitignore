@@ -6,6 +6,6 @@ finished_videos/
 tmp/
 config/already_posted.txt
 config/secrets.json
-
+10kchars.mp3
 
 __pycache__/

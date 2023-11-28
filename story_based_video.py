@@ -1,14 +1,15 @@
+from datetime import timedelta
 from random import randrange
 import string
 import subprocess
 import textgrid
-from typing import Tuple
+from typing import Literal, Tuple
 
 from moviepy import *
-from video_utils import crop_to_center_and_resize, select_background_video
+from video_utils import CHARS_PER_SECOND, DURATION_OFFSET_PERCENT, crop_to_center_and_resize, select_background_video
 from openai_interface import OpenAiInterface
 
-from reddit_requests import Post
+from reddit_requests import Post, PostSearch
 
 mfa_dictionary_names = {
     "english": ["english_us_arpa", "english_us_arpa"],
@@ -180,3 +181,46 @@ def generate_text_list(text: str):
         sum += num
 
     return text_list
+
+
+def find_story_post(
+    timeframe: Literal["day", "week", "month", "year", "all"],
+    listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
+    subreddit_list: list[str],
+    approx_video_duration: timedelta,
+):
+    with open("config/already_posted.txt", "r") as file:
+        already_posted_ids = file.read().splitlines()
+
+    expected_duration_seconds = approx_video_duration.total_seconds()
+    duration_lower_bound = expected_duration_seconds - (
+        expected_duration_seconds * DURATION_OFFSET_PERCENT
+    )
+    duration_upper_bound = expected_duration_seconds + (
+        expected_duration_seconds * DURATION_OFFSET_PERCENT
+    )
+    print(
+        f"looking for a post that takes between {duration_lower_bound} and {duration_upper_bound} seconds"
+    )
+
+    maxAttempts = 50
+    while True:
+        subreddit = subreddit_list[randrange(0, len(subreddit_list))]
+        search = PostSearch(subreddit, listing, timeframe)
+        selected_post = search.posts[randrange(0, len(search.posts))]
+
+        post_duration = len(selected_post.selftext) / CHARS_PER_SECOND
+
+        # break loop to use current post
+        if not selected_post.post_id in already_posted_ids:
+            if duration_lower_bound < post_duration < duration_upper_bound:
+                break
+            else:
+                print(
+                    f"Post {selected_post.post_id} duration {post_duration} is not within {DURATION_OFFSET_PERCENT*100}% of {expected_duration_seconds}"
+                )
+        else:
+            maxAttempts -= 1
+            if maxAttempts <= 0:
+                raise Exception(f"No valid post found in {maxAttempts} attempts.")
+    return selected_post

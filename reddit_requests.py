@@ -1,5 +1,4 @@
 from random import randrange
-from typing import Literal
 import requests
 
 from text_processing import text_cleanup
@@ -176,27 +175,3 @@ def calc_chain_score(comment: Comment, skip_first: bool = True) -> int:
         sum += calc_chain_score(reply, False)
 
     return sum
-
-
-def find_post(
-    timeframe: Literal["day", "week", "month", "year", "all"],
-    listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
-    subreddit_list: list[str],
-):
-    with open("config/already_posted.txt", "r") as file:
-        already_posted_ids = file.read().splitlines()
-
-    maxAttempts = 50
-    while True:
-        subreddit = subreddit_list[randrange(0, len(subreddit_list))]
-        search = PostSearch(subreddit, listing, timeframe)
-        selected_post = search.posts[randrange(0, len(search.posts))]
-        # TODO check if this is a valid post: post body length
-
-        if not selected_post.post_id in already_posted_ids:
-            break
-        else:
-            maxAttempts -= 1
-            if maxAttempts <= 0:
-                raise Exception(f"No valid post found in {maxAttempts} attempts.")
-    return selected_post

@@ -10,6 +10,8 @@ from typing import Tuple
 BACKGROUND_VIDEO_PATH = "f:/background_videos/"
 POSSIBLE_FILE_ENDINGS = (".mp4", ".webm", ".mkv", ".ogv", ".mpeg", ".avi", ".mov")
 
+CHARS_PER_SECOND = (10000 / 10.5) / 60
+DURATION_OFFSET_PERCENT = 0.25
 
 def select_background_video(min_length: int, max_attempts: int = 10) -> VideoClip:
     possible_videos = [
