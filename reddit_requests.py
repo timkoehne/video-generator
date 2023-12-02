@@ -74,15 +74,22 @@ class Post:
         for index, comment in enumerate(self.comments):
             chain_score = calc_chain_score(comment)
             print(
-                f"{index}, : Comment from {comment.author} has {comment.score} score. This comment chain has a combined {chain_score}"
+                f"Comment {index} from {comment.author} has {comment.score} score. This comment chain has a combined {chain_score}"
             )
 
         # TODO filter removed comments
+        
+        filtered_comments = list(
+            filter(lambda comment: comment.body != "[removed]" and comment.body != "[deleted]", self.comments)
+        )
+        if len(self.comments) > len(filtered_comments):
+            print(f"ignoring {len(self.comments) - len(filtered_comments)} comments because they were removed")
+        
 
         filtered_comments = list(
             filter(
                 lambda comment: calc_chain_score(comment) > score_threshold,
-                self.comments,
+                filtered_comments,
             )
         )[:-1]
         print(f"After score filtering there are {len(filtered_comments)} comments left")

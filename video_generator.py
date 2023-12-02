@@ -10,7 +10,7 @@ from story_based_video import find_story_post, generate_story_clip
 
 
 DEFAULT_FILE_NAME = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-FINISHED_VIDEO_PATH = "C:/Users/Tim/Desktop/finished_videos/"
+FINISHED_VIDEO_PATH = "F:/finished_videos/"
 threads = 16
 
 with open("config/reddit_threads.json") as file:
@@ -41,7 +41,7 @@ def generate_story_video(
     selected_post = find_story_post(
         timeframe, listing, reddit_threads["story_based"], approx_video_duration
     )
-    generate_story_video_by_id(selected_post.post_id)
+    generate_story_video_by_id(selected_post.post_id, resolution, filename)
 
 
 def generate_comment_video(
@@ -54,11 +54,12 @@ def generate_comment_video(
     selected_post = find_comment_post(
         timeframe, listing, reddit_threads["comment_based"], approx_video_duration
     )
-    generate_comment_video_by_id(selected_post.post_id)
+    generate_comment_video_by_id(selected_post.post_id, resolution, filename)
 
 
 def generate_story_video_by_id(
     post_id: str,
+    resolution: Tuple[int, int],
     filename: str = DEFAULT_FILE_NAME,
 ):
     post = create_post_from_post_id(post_id)
@@ -66,7 +67,7 @@ def generate_story_video_by_id(
     print(f'selected post titled "{post.title}"')
     print(f"saving post_id {post.post_id} as selected")
 
-    video: VideoClip = generate_story_clip(post, (1920, 1080))
+    video: VideoClip = generate_story_clip(post, resolution)
     save_video(video, filename)
 
     for f in os.listdir("tmp/"):
@@ -76,6 +77,7 @@ def generate_story_video_by_id(
 
 def generate_comment_video_by_id(
     post_id: str,
+    resolution: Tuple[int, int],
     filename: str = DEFAULT_FILE_NAME,
 ):
     post = create_post_from_post_id(post_id)
@@ -83,7 +85,7 @@ def generate_comment_video_by_id(
     print(f'selected post titled "{post.title}"')
     print(f"saving post_id {post.post_id} as selected")
 
-    video: VideoClip = generate_comments_clip(post, (1920, 1080))
+    video: VideoClip = generate_comments_clip(post, resolution)
     save_video(video, filename)
 
     for f in os.listdir("tmp/"):
@@ -100,5 +102,13 @@ def save_video(video: VideoClip, filename: str):
     )
 
 
-# generate_story_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5))
-generate_comment_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5))
+generate_story_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5), "story.mp4")
+generate_comment_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5), "comments.mp4")
+
+#TODO remove urls
+#TODO error handling
+#custom intros for every video that summerizes the main point
+#custom outro for every video
+
+
+# p = create_post_from_post_id("17v6rd8")

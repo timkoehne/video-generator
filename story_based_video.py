@@ -6,7 +6,7 @@ import textgrid
 from typing import Literal, Tuple
 
 from moviepy import *
-from video_utils import CHARS_PER_SECOND, DURATION_OFFSET_PERCENT, crop_to_center_and_resize, select_background_video
+from video_utils import CHARS_PER_SECOND, DURATION_OFFSET_PERCENT, crop_to_center_and_resize, generate_intro, select_background_video
 from openai_interface import OpenAiInterface
 
 from reddit_requests import Post, PostSearch
@@ -28,6 +28,7 @@ def generate_story_clip(
     post: Post, resolution: Tuple[int, int], language: str = "english"
 ) -> VideoClip:
     text: str = post.selftext
+    intro: VideoClip = generate_intro(post, resolution)
 
     # print("SKIPPING GENERATING AUDIO")
     openaiinterface = OpenAiInterface()
@@ -50,6 +51,10 @@ def generate_story_clip(
         text, resolution, f"tmp/{post.post_id}-audio.TextGrid"
     )
     combined_text_clip = combined_text_clip.with_audio(audio_clip)
+    
+    combined_text_clip = concatenate_videoclips([intro, combined_text_clip])
+    combined_text_clip = combined_text_clip.with_position("center")
+    
 
     backgroundVideo: VideoClip = select_background_video(
         combined_text_clip.duration + 0.75

@@ -7,6 +7,7 @@ from video_utils import (
     CHARS_PER_SECOND,
     DURATION_OFFSET_PERCENT,
     crop_to_center_and_resize,
+    generate_intro,
     select_background_video,
 )
 from openai_interface import OpenAiInterface
@@ -27,27 +28,6 @@ def calculate_font_size(text: str) -> Tuple[list[str], list[int]]:
             font_sizes.append(70)
 
     return (text_parts, font_sizes)
-
-
-def generate_comment_intro(post: Post, resolution: Tuple[int, int]) -> VideoClip:
-    openaiinterface = OpenAiInterface()
-    openaiinterface.generate_mp3(post.title, f"tmp/{post.post_id}-audio-intro.mp3")
-
-    intro_clip: VideoClip = TextClip(
-        post.title,
-        size=(resolution[0] * 0.8, 0),
-        color="white",
-        font="Arial-Black",
-        font_size=70,
-        method="caption",
-        stroke_color="black",
-        stroke_width=3,
-        align="center",
-    )
-    audio_clip = AudioFileClip(f"tmp/{post.post_id}-audio-intro.mp3")
-    intro_clip = intro_clip.with_duration(audio_clip.duration + 1.25)
-    intro_clip = intro_clip.with_audio(audio_clip)
-    return intro_clip
 
 
 def generate_single_comment_clip(
@@ -88,7 +68,7 @@ def generate_single_comment_clip(
 
 def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     text_clips: list[VideoClip] = []
-    intro: VideoClip = generate_comment_intro(post, resolution)
+    intro: VideoClip = generate_intro(post, resolution)
 
     comments: list[Comment] = post.get_good_comments()
     print(f"There are {len(comments)} good comments")
