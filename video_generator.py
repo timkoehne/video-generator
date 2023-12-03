@@ -102,13 +102,17 @@ def save_video(video: VideoClip, filename: str):
     )
 
 
-generate_story_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5), "story.mp4")
-generate_comment_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5), "comments.mp4")
+# generate_story_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5))
+# generate_comment_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5))
+
+generate_story_video_by_id("187mcgu", (1920, 1080))
+
 
 #TODO remove urls
 #TODO error handling
-#custom intros for every video that summerizes the main point
-#custom outro for every video
 
 
-# p = create_post_from_post_id("17v6rd8")
+# title = openaiinterface.create_video_title(p.selftext)
+# print(f"Title: {title}")
+# summary = openaiinterface.create_video_summary(p.selftext)
+# print(f"Intro Summary: {summary}")

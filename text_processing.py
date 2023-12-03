@@ -1,7 +1,7 @@
 import re
-import emoji
 from markdown import Markdown
 from io import StringIO
+
 
 def unmark_element(element, stream=None):
     if stream is None:
@@ -16,9 +16,9 @@ def unmark_element(element, stream=None):
 
 
 # patching Markdown
-Markdown.output_formats["plain"] = unmark_element # type: ignore
-__md = Markdown(output_format="plain") # type: ignore
-__md.stripTopLevelTags = False # type: ignore
+Markdown.output_formats["plain"] = unmark_element  # type: ignore
+__md = Markdown(output_format="plain")  # type: ignore
+__md.stripTopLevelTags = False  # type: ignore
 
 
 def remove_markdown(text):
@@ -28,7 +28,14 @@ def remove_markdown(text):
 def split_text_to_max_x_chars(text: str, x: int) -> list[str]:
     if len(text) > x:
         first_part = text[0:x]
-        period_index = first_part.rindex(".")
+        
+        separate_by = " "
+        for sep in [".", ";", ","]:
+            if sep in first_part:
+                separate_by = sep
+                break
+        
+        period_index = first_part.rindex(separate_by)
         first_part = text[0 : period_index + 1]
         return [first_part] + split_text_to_max_x_chars(text[period_index + 1 :], x)
     else:
@@ -36,9 +43,8 @@ def split_text_to_max_x_chars(text: str, x: int) -> list[str]:
 
 
 def text_cleanup(text: str) -> str:
-    
     text = remove_markdown(text)
-    
+
     to_remove = ["\nedit", "*edit", "\ntldr", "\ntl;dr", "update:"]
     for phrase in to_remove:
         if phrase in text.lower():
@@ -46,13 +52,20 @@ def text_cleanup(text: str) -> str:
             if edit_position > len(text) * 0.4:
                 # print(f"removing {phrase.strip()}")
                 text = text[0:edit_position]
+                
+
+    for match in re.findall('[a-zA-Z]+\n[a-zA-Z]+', text):
+        replace_with = ". ".join(match.split('\n'))
+        text = text.replace(match, replace_with)
+        # print(f"replacing {match} with {replace_with}")
 
     text = " ".join(text.split())
     text = text.replace(" , ", ", ")
     text = text.replace(" . ", ". ")
     text = text.replace("“", '"')
-    text = emoji.replace_emoji(text, "")
-
+    
+    text = text.encode("ascii", errors="ignore").decode()
+        
     for match in re.findall('[a-zA-Z]+"[a-zA-Z]+', text):
         replace_with = " ".join(match.split('"'))
         text = text.replace(match, replace_with)
@@ -72,17 +85,17 @@ def text_cleanup(text: str) -> str:
         replace_with = ", ".join(match.split(","))
         text = text.replace(match, replace_with)
         # print(f"replacing {match} with {replace_with}")
-        
+
     for match in re.findall("[a-zA-Z] - [a-zA-Z]", text):
         replace_with = ", ".join(match.split(" - "))
         text = text.replace(match, replace_with)
         # print(f"replacing {match} with {replace_with}")
-        
+
     for match in re.findall("[a-zA-Z] ,[a-zA-Z]", text):
         replace_with = ", ".join(match.split(" ,"))
         text = text.replace(match, replace_with)
         # print(f"replacing {match} with {replace_with}")
-        
+
     for match in re.findall("[a-zA-Z]\.\.\.[a-zA-Z]", text):
         replace_with = "... ".join(match.split("..."))
         text = text.replace(match, replace_with)

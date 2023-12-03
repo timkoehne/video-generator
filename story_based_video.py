@@ -6,7 +6,7 @@ import textgrid
 from typing import Literal, Tuple
 
 from moviepy import *
-from video_utils import CHARS_PER_SECOND, DURATION_OFFSET_PERCENT, crop_to_center_and_resize, generate_intro, select_background_video
+from video_utils import CHARS_PER_SECOND, DURATION_OFFSET_PERCENT, crop_to_center_and_resize, generate_intro_clip, generate_outro_clip, select_background_video
 from openai_interface import OpenAiInterface
 
 from reddit_requests import Post, PostSearch
@@ -28,7 +28,8 @@ def generate_story_clip(
     post: Post, resolution: Tuple[int, int], language: str = "english"
 ) -> VideoClip:
     text: str = post.selftext
-    intro: VideoClip = generate_intro(post, resolution)
+    intro: VideoClip = generate_intro_clip(post, resolution)
+    outro: VideoClip = generate_outro_clip(post, resolution)
 
     # print("SKIPPING GENERATING AUDIO")
     openaiinterface = OpenAiInterface()
@@ -37,7 +38,7 @@ def generate_story_clip(
 
     audio_clip: AudioClip = AudioFileClip(f"tmp/{post.post_id}-audio.mp3")
     audio_clip.write_audiofile(f"tmp/{post.post_id}-audio.wav")
-    print(f"the video will be {audio_clip.duration}s long")
+    print(f"the video will be {audio_clip.duration + intro.duration + outro.duration}s long")
 
     with open(f"tmp/{post.post_id}-audio.txt", "w", encoding="utf-8") as file:
         exclude = set(string.punctuation)
@@ -52,7 +53,7 @@ def generate_story_clip(
     )
     combined_text_clip = combined_text_clip.with_audio(audio_clip)
     
-    combined_text_clip = concatenate_videoclips([intro, combined_text_clip])
+    combined_text_clip = concatenate_videoclips([intro, combined_text_clip, outro])
     combined_text_clip = combined_text_clip.with_position("center")
     
 

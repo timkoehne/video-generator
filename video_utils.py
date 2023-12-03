@@ -16,6 +16,7 @@ POSSIBLE_FILE_ENDINGS = (".mp4", ".webm", ".mkv", ".ogv", ".mpeg", ".avi", ".mov
 CHARS_PER_SECOND = (10000 / 10.5) / 60
 DURATION_OFFSET_PERCENT = 0.25
 
+
 def select_background_video(min_length: int, max_attempts: int = 10) -> VideoClip:
     possible_videos = [
         p.resolve()
@@ -64,9 +65,13 @@ def crop_to_center_and_resize(clip: VideoClip, to_resolution: Tuple[int, int]):
     return clip
 
 
-def generate_intro(post: Post, resolution: Tuple[int, int]) -> VideoClip:
+def generate_intro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     openaiinterface = OpenAiInterface()
-    openaiinterface.generate_mp3(post.title, f"tmp/{post.post_id}-audio-intro.mp3")
+    intro_text = openaiinterface.generate_text_without_context(
+        "summarize as a youtube video intro in two sentences",
+        post.title + "\n" + post.selftext,
+    )
+    openaiinterface.generate_mp3(intro_text, f"tmp/{post.post_id}-audio-intro.mp3")
 
     intro_clip: VideoClip = TextClip(
         post.title,
@@ -80,9 +85,35 @@ def generate_intro(post: Post, resolution: Tuple[int, int]) -> VideoClip:
         align="center",
     )
     audio_clip = AudioFileClip(f"tmp/{post.post_id}-audio-intro.mp3")
-    intro_clip = intro_clip.with_duration(audio_clip.duration + 1.25)
+    intro_clip = intro_clip.with_duration(audio_clip.duration + 1)
     intro_clip = intro_clip.with_audio(audio_clip)
-    
-    print(f"Creating intro from title with duration {intro_clip.duration}s")
-    
+
+    print(f"Created intro with duration {intro_clip.duration}s")
+
     return intro_clip
+
+
+def generate_outro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
+    openaiinterface = OpenAiInterface()
+    outro_text = openaiinterface.generate_text_without_context(
+        "write an outro for a youtube video based on this story in two sentences",
+        post.title + "\n" + post.selftext,
+    )
+    openaiinterface.generate_mp3(outro_text, f"tmp/{post.post_id}-audio-outro.mp3")
+
+    outro_clip: VideoClip = TextClip(" ")
+    audio_clip = AudioFileClip(f"tmp/{post.post_id}-audio-outro.mp3")
+    outro_clip = outro_clip.with_duration(audio_clip.duration + 1)
+    outro_clip = outro_clip.with_audio(audio_clip)
+
+    print(f"Created outro with duration {outro_clip.duration}s")
+    return outro_clip
+
+
+def create_video_title(self, text: str) -> str:
+    openaiinterface = OpenAiInterface()
+
+    response = openaiinterface.generate_text_without_context(
+        "summarize the input as a youtube video title", text
+    )
+    return response

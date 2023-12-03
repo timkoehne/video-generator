@@ -7,5 +7,9 @@ tmp/
 config/already_posted.txt
 config/secrets.json
 10kchars.mp3
+image.png
+mask.png
+output-0.png
+test.py
 
 __pycache__/

@@ -7,7 +7,8 @@ from video_utils import (
     CHARS_PER_SECOND,
     DURATION_OFFSET_PERCENT,
     crop_to_center_and_resize,
-    generate_intro,
+    generate_intro_clip,
+    generate_outro_clip,
     select_background_video,
 )
 from openai_interface import OpenAiInterface
@@ -44,7 +45,6 @@ def generate_single_comment_clip(
         openaiinterface.generate_mp3(
             part, f"tmp/{post.post_id}-audio-{index}-part-{i}.mp3"
         )
-        # clip_parts.append()
         clip_part: VideoClip = TextClip(
             part,
             size=(resolution[0] * 0.8, 0),
@@ -68,7 +68,8 @@ def generate_single_comment_clip(
 
 def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     text_clips: list[VideoClip] = []
-    intro: VideoClip = generate_intro(post, resolution)
+    intro: VideoClip = generate_intro_clip(post, resolution)
+    outro: VideoClip = generate_outro_clip(post, resolution)
 
     comments: list[Comment] = post.get_good_comments()
     print(f"There are {len(comments)} good comments")
@@ -85,7 +86,7 @@ def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip
         )
         text_clips.append(comment_clip)
     combined_text_video: VideoClip = concatenate_videoclips(text_clips)
-    combined_text_video = concatenate_videoclips([intro, combined_text_video])
+    combined_text_video = concatenate_videoclips([intro, combined_text_video, outro])
     combined_text_video = combined_text_video.with_position("center")
 
     background_video: VideoClip = select_background_video(combined_text_video.duration)
