@@ -68,13 +68,13 @@ def crop_to_center_and_resize(clip: VideoClip, to_resolution: Tuple[int, int]):
 def generate_intro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     openaiinterface = OpenAiInterface()
     intro_text = openaiinterface.generate_text_without_context(
-        "summarize as a youtube video intro in two sentences",
+        "write an intro for a youtube video in two sentences. Today's topic is this story that someone posted. Do not mention a channel name.",
         post.title + "\n" + post.selftext,
     )
     openaiinterface.generate_mp3(intro_text, f"tmp/{post.post_id}-audio-intro.mp3")
 
     intro_clip: VideoClip = TextClip(
-        post.title,
+        "Today's Topic:\n" + post.title,
         size=(resolution[0] * 0.8, 0),
         color="white",
         font="Arial-Black",
@@ -96,7 +96,7 @@ def generate_intro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
 def generate_outro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     openaiinterface = OpenAiInterface()
     outro_text = openaiinterface.generate_text_without_context(
-        "write an outro for a youtube video based on this story in two sentences",
+        "write an outro for a youtube video in two sentences. Today's topic was this story that someone posted. Do not mention a channel name.",
         post.title + "\n" + post.selftext,
     )
     openaiinterface.generate_mp3(outro_text, f"tmp/{post.post_id}-audio-outro.mp3")
@@ -114,6 +114,6 @@ def create_video_title(self, text: str) -> str:
     openaiinterface = OpenAiInterface()
 
     response = openaiinterface.generate_text_without_context(
-        "summarize the input as a youtube video title", text
+        "write a youtube video title based on this", text
     )
     return response
