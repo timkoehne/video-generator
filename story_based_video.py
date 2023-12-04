@@ -6,7 +6,14 @@ import textgrid
 from typing import Literal, Tuple
 
 from moviepy import *
-from video_utils import CHARS_PER_SECOND, DURATION_OFFSET_PERCENT, crop_to_center_and_resize, generate_intro_clip, generate_outro_clip, select_background_video
+from video_utils import (
+    CHARS_PER_SECOND,
+    DURATION_OFFSET_PERCENT,
+    crop_to_center_and_resize,
+    generate_intro_clip,
+    generate_outro_clip,
+    select_background_video,
+)
 from openai_interface import OpenAiInterface
 
 from reddit_requests import Post, PostSearch
@@ -38,7 +45,9 @@ def generate_story_clip(
 
     audio_clip: AudioClip = AudioFileClip(f"tmp/{post.post_id}-audio.mp3")
     audio_clip.write_audiofile(f"tmp/{post.post_id}-audio.wav")
-    print(f"the video will be {audio_clip.duration + intro.duration + outro.duration}s long")
+    print(
+        f"the video will be {audio_clip.duration + intro.duration + outro.duration}s long"
+    )
 
     with open(f"tmp/{post.post_id}-audio.txt", "w", encoding="utf-8") as file:
         exclude = set(string.punctuation)
@@ -52,10 +61,9 @@ def generate_story_clip(
         text, resolution, f"tmp/{post.post_id}-audio.TextGrid"
     )
     combined_text_clip = combined_text_clip.with_audio(audio_clip)
-    
+
     combined_text_clip = concatenate_videoclips([intro, combined_text_clip, outro])
     combined_text_clip = combined_text_clip.with_position("center")
-    
 
     backgroundVideo: VideoClip = select_background_video(
         combined_text_clip.duration + 0.75
@@ -217,11 +225,14 @@ def find_story_post(
     while True:
         subreddit = subreddit_list[randrange(0, len(subreddit_list))]
         search = PostSearch(subreddit, listing, timeframe)
+
+        if len(search.posts) < 1:
+            continue
         selected_post = search.posts[randrange(0, len(search.posts))]
 
         post_duration = len(selected_post.selftext) / CHARS_PER_SECOND
 
-        # break loop to use current post
+        # break loop to use currently selected post
         if not selected_post.post_id in already_posted_ids:
             if duration_lower_bound < post_duration < duration_upper_bound:
                 break

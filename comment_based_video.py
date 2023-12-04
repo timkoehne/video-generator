@@ -119,6 +119,9 @@ def find_comment_post(
     while True:
         subreddit = subreddit_list[randrange(0, len(subreddit_list))]
         search = PostSearch(subreddit, listing, timeframe)
+
+        if len(search.posts) < 1:
+            continue
         selected_post = search.posts[randrange(0, len(search.posts))]
 
         expected_video_chars = int(expected_duration_seconds * CHARS_PER_SECOND)
@@ -130,7 +133,7 @@ def find_comment_post(
         sum_chars = sum([len(g.body) for g in good_comments])
         post_duration = sum_chars / CHARS_PER_SECOND
 
-        # break loop to use current post
+        # break loop to use currently selected post
         if not selected_post.post_id in already_posted_ids:
             if duration_lower_bound < post_duration < duration_upper_bound:
                 break
