@@ -70,7 +70,7 @@ def generate_story_clip(
 def align_audio_and_text(audiofile: str, textfile: str, language: str):
     dictionary_name, acoustic_model_name = mfa_dictionary_names[language]
 
-    subprocess.run(
+    result = subprocess.run(
         [
             "mfa",
             "align_one",
@@ -83,6 +83,10 @@ def align_audio_and_text(audiofile: str, textfile: str, language: str):
             "--single_speaker",
         ]
     )
+    try:
+        result.check_returncode()
+    except subprocess.CalledProcessError:
+        raise Exception("Alignment failed")
 
 
 def parse_textgrid(filename, text_segments: list[str]):
