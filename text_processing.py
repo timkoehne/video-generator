@@ -1,6 +1,7 @@
 import re
 from markdown import Markdown
 from io import StringIO
+import unidecode
 
 
 def unmark_element(element, stream=None):
@@ -64,7 +65,7 @@ def text_cleanup(text: str) -> str:
     text = text.replace(" . ", ". ")
     text = text.replace("“", '"')
     
-    text = text.encode("ascii", errors="ignore").decode()
+    text = unidecode.unidecode(text)
         
     for match in re.findall('[a-zA-Z]+"[a-zA-Z]+', text):
         replace_with = " ".join(match.split('"'))
