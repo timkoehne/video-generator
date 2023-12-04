@@ -2,16 +2,17 @@
 *",
 *\,"
 \*,"
-AITA,Am I The Asshole?
-aita,am I the asshole?
-TIFU,Today I fucked up
-tifu,today I fucked up
-idk,I don't know
-IDK,I don't know
+ AITA, Am I The Asshole
+ aita, am I the asshole
+ TIFU, Today I fucked up
+ tifu, today I fucked up
+ idk, I don't know
+ IDK, I don't know
  + , plus 
 &amp;, and 
 **,
  ( , (
+ ) ,) 
 …,...
  . ,. 
  .. ,... 
@@ -19,6 +20,10 @@ IDK,I don't know
  .,.
  ..,...
  ...,...
-MIL,Mother in Law
-FIL,Father in Law
-DIL,Daughter in Law
+ MIL , Mother in Law 
+ FIL , Father in Law 
+ DIL , Daughter in Law 
+ BIL , Brother in Law 
+ bf , boyfriend 
+ gf , girlfriend 
+ tw: , Trigger warning: 
