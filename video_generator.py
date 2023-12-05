@@ -8,8 +8,6 @@ from reddit_requests import create_post_from_post_id
 from comment_based_video import find_comment_post, generate_comments_clip
 from story_based_video import find_story_post, generate_story_clip
 
-
-DEFAULT_FILE_NAME = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 FINISHED_VIDEO_PATH = "F:/finished_videos/"
 threads = 16
 
@@ -36,8 +34,11 @@ def generate_story_video(
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
     approx_video_duration: datetime.timedelta = datetime.timedelta(minutes=5),
-    filename: str = DEFAULT_FILE_NAME,
+    filename: str = "",
 ):
+    if filename == "":
+        filename = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
     selected_post = find_story_post(
         timeframe, listing, reddit_threads["story_based"], approx_video_duration
     )
@@ -49,8 +50,11 @@ def generate_comment_video(
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
     approx_video_duration: datetime.timedelta = datetime.timedelta(minutes=5),
-    filename: str = DEFAULT_FILE_NAME,
+    filename: str = "",
 ):
+    if filename == "":
+        filename = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
     selected_post = find_comment_post(
         timeframe, listing, reddit_threads["comment_based"], approx_video_duration
     )
@@ -60,8 +64,11 @@ def generate_comment_video(
 def generate_story_video_by_id(
     post_id: str,
     resolution: Tuple[int, int],
-    filename: str = DEFAULT_FILE_NAME,
+    filename: str = "",
 ):
+    if filename == "":
+        filename = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
     post = create_post_from_post_id(post_id)
     add_to_already_posted_ids(post.post_id)
     print(f'selected post titled "{post.title}"')
@@ -76,10 +83,11 @@ def generate_story_video_by_id(
 
 
 def generate_comment_video_by_id(
-    post_id: str,
-    resolution: Tuple[int, int],
-    filename: str = DEFAULT_FILE_NAME,
+    post_id: str, resolution: Tuple[int, int], filename: str = ""
 ):
+    if filename == "":
+        filename = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
     post = create_post_from_post_id(post_id)
     add_to_already_posted_ids(post.post_id)
     print(f'selected post titled "{post.title}"')
@@ -103,14 +111,24 @@ def save_video(video: VideoClip, filename: str):
 
 
 # generate_story_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5))
-# generate_comment_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5))
-
-generate_story_video_by_id("187mcgu", (1920, 1080))
+generate_comment_video((1920, 1080), "month", "top", datetime.timedelta(minutes=5))
 
 
-#TODO remove urls
-#TODO error handling
+# ps = PostSearch("EntitledPeople", "top", "month")
+# for p in ps.posts:
+#     print(p.selftext)
+#     print(check_if_valid_post(p.post_id, p.title, p.selftext, datetime.timedelta(minutes=5)))
+#     input()
 
+# TODO remove urls
+# TODO error handling
+
+# TODO mark nsfw
+# TODO for some reason "beautiful" gets replaced with "beautoday". maybe only sometimes??
+# TODO what to do if post includes the words "reddit"
+# TODO ignore post that contain "update" in title
+# TODO ignore posts that contain images
+# TODO while aligning: if alignment doesnt work: check next words and ignore current one
 
 # title = openaiinterface.create_video_title(p.selftext)
 # print(f"Title: {title}")

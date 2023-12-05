@@ -5,7 +5,7 @@ from typing import Literal, Tuple
 from moviepy import *
 from video_utils import (
     CHARS_PER_SECOND,
-    DURATION_OFFSET_PERCENT,
+    check_if_valid_post,
     crop_to_center_and_resize,
     generate_intro_clip,
     generate_outro_clip,
@@ -101,20 +101,6 @@ def find_comment_post(
     subreddit_list: list[str],
     approx_video_duration: timedelta,
 ):
-    with open("config/already_posted.txt", "r") as file:
-        already_posted_ids = file.read().splitlines()
-
-    expected_duration_seconds = approx_video_duration.total_seconds()
-    duration_lower_bound = expected_duration_seconds - (
-        expected_duration_seconds * DURATION_OFFSET_PERCENT
-    )
-    duration_upper_bound = expected_duration_seconds + (
-        expected_duration_seconds * DURATION_OFFSET_PERCENT
-    )
-    print(
-        f"looking for a post with comments that take between {duration_lower_bound} and {duration_upper_bound} seconds"
-    )
-
     maxAttempts = 50
     while True:
         subreddit = subreddit_list[randrange(0, len(subreddit_list))]
@@ -124,23 +110,23 @@ def find_comment_post(
             continue
         selected_post = search.posts[randrange(0, len(search.posts))]
 
-        expected_video_chars = int(expected_duration_seconds * CHARS_PER_SECOND)
-        print(f"this should result in {int(expected_video_chars)} characters")
         good_comments = selected_post.get_good_comments(
-            num_chars_to_limit_comments=expected_video_chars
+            num_chars_to_limit_comments=int(
+                approx_video_duration.total_seconds() * CHARS_PER_SECOND
+            )
         )
 
-        sum_chars = sum([len(g.body) for g in good_comments])
-        post_duration = sum_chars / CHARS_PER_SECOND
+        comments_combined = " ".join([c.body for c in good_comments])
 
-        # break loop to use currently selected post
-        if not selected_post.post_id in already_posted_ids:
-            if duration_lower_bound < post_duration < duration_upper_bound:
-                break
-            else:
-                print(
-                    f"Post {selected_post.post_id} duration {post_duration} is not within {DURATION_OFFSET_PERCENT*100}% of {expected_duration_seconds}"
-                )
+        valid = check_if_valid_post(
+            selected_post.post_id,
+            selected_post.title,
+            comments_combined,
+            approx_video_duration,
+        )
+
+        if valid:
+            break
         else:
             maxAttempts -= 1
             if maxAttempts <= 0:

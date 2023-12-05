@@ -1,6 +1,8 @@
+from datetime import timedelta
 from math import floor
 from pathlib import Path
 from random import randint, randrange
+import random
 from moviepy.video.fx import resize, crop
 from moviepy.audio.fx import multiply_volume
 from moviepy import *
@@ -40,7 +42,7 @@ def select_background_video(min_length: int, max_attempts: int = 10) -> VideoCli
     print(
         f"clip duration {clip.duration} and min_length {min_length} combined: {floor(clip.duration - min_length)}"
     )
-    start_time = randint(0, floor(clip.duration - min_length))
+    start_time = random.random() * (clip.duration - min_length)
     end_time = start_time + min_length
 
     print(
@@ -117,3 +119,41 @@ def create_video_title(self, text: str) -> str:
         "write a youtube video title based on this", text
     )
     return response
+
+
+def check_if_valid_post(
+    post_id: str, post_title: str, text_to_check: str, approx_video_duration: timedelta
+) -> bool:
+    with open("config/already_posted.txt", "r") as file:
+        already_posted_ids = file.read().splitlines()
+    if post_id in already_posted_ids:
+        print(f"Post {post_id} has already been posted")
+        return False
+
+    filter_word_in_title = ["update:", "(update)"]
+    for word in filter_word_in_title:
+        if word in post_title.lower():
+            print(f"Post {post_id} is an update")
+            return False
+
+    if post_title.lower().startswith("update "):
+        print(f"Post {post_id} is an update")
+        return False
+
+    expected_duration_seconds = approx_video_duration.total_seconds()
+    duration_lower_bound = expected_duration_seconds - (
+        expected_duration_seconds * DURATION_OFFSET_PERCENT
+    )
+    duration_upper_bound = expected_duration_seconds + (
+        expected_duration_seconds * DURATION_OFFSET_PERCENT
+    )
+    # print(f"looking for a post that takes between {duration_lower_bound} and {duration_upper_bound} seconds")
+    post_duration = len(text_to_check) / CHARS_PER_SECOND
+    if duration_lower_bound > post_duration or post_duration > duration_upper_bound:
+        print(
+            f"Post {post_id} duration {post_duration} is not within {DURATION_OFFSET_PERCENT*100}% of {expected_duration_seconds}"
+        )
+        return False
+
+    print(f"Post {post_id} is valid")
+    return True

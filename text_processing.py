@@ -146,11 +146,6 @@ def text_cleanup(text: str) -> str:
         # print(f"replacing {match[0]} with {replace_with}")
         text = text.replace(match[0], match[1])
 
-    # for match in  re.findall('[a-zA-Z]+-[a-zA-Z]+', text):
-    #     replace_with = " ".join(match.split("-"))
-    #     text = text.replace(match, replace_with)
-    #     print(f"replacing {match} with {replace_with}")
-
     with open("config/replace_in_text.txt") as file:
         for line in file.readlines():
             line = line.strip("\n")

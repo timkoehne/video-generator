@@ -7,8 +7,7 @@ from typing import Literal, Tuple
 
 from moviepy import *
 from video_utils import (
-    CHARS_PER_SECOND,
-    DURATION_OFFSET_PERCENT,
+    check_if_valid_post,
     crop_to_center_and_resize,
     generate_intro_clip,
     generate_outro_clip,
@@ -207,20 +206,6 @@ def find_story_post(
     subreddit_list: list[str],
     approx_video_duration: timedelta,
 ):
-    with open("config/already_posted.txt", "r") as file:
-        already_posted_ids = file.read().splitlines()
-
-    expected_duration_seconds = approx_video_duration.total_seconds()
-    duration_lower_bound = expected_duration_seconds - (
-        expected_duration_seconds * DURATION_OFFSET_PERCENT
-    )
-    duration_upper_bound = expected_duration_seconds + (
-        expected_duration_seconds * DURATION_OFFSET_PERCENT
-    )
-    print(
-        f"looking for a post that takes between {duration_lower_bound} and {duration_upper_bound} seconds"
-    )
-
     maxAttempts = 50
     while True:
         subreddit = subreddit_list[randrange(0, len(subreddit_list))]
@@ -230,16 +215,15 @@ def find_story_post(
             continue
         selected_post = search.posts[randrange(0, len(search.posts))]
 
-        post_duration = len(selected_post.selftext) / CHARS_PER_SECOND
+        valid = check_if_valid_post(
+            selected_post.post_id,
+            selected_post.title,
+            selected_post.selftext,
+            approx_video_duration,
+        )
 
-        # break loop to use currently selected post
-        if not selected_post.post_id in already_posted_ids:
-            if duration_lower_bound < post_duration < duration_upper_bound:
-                break
-            else:
-                print(
-                    f"Post {selected_post.post_id} duration {post_duration} is not within {DURATION_OFFSET_PERCENT*100}% of {expected_duration_seconds}"
-                )
+        if valid:
+            break
         else:
             maxAttempts -= 1
             if maxAttempts <= 0:

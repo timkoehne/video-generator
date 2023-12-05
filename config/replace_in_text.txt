@@ -27,3 +27,6 @@
  bf , boyfriend 
  gf , girlfriend 
  tw: , Trigger warning: 
+WW1,World War 1
+WW2,World War 2
+ iirc , if I remember correctly 
