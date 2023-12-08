@@ -2,6 +2,7 @@ from datetime import timedelta
 from random import randrange
 import string
 import subprocess
+import sys
 import textgrid
 from typing import Literal, Tuple
 
@@ -96,7 +97,34 @@ def align_audio_and_text(audiofile: str, textfile: str, language: str):
         raise Exception("Alignment failed")
 
 
-def parse_textgrid(filename, text_segments: list[str]):
+def remove_differences_to_textgrid(filtered_tg, text: str) -> str:
+    words = text.split()
+    for i in range(0, len(filtered_tg)):
+
+        look_for_matches = []
+        for offset in range(i, min(i + 3, len(words))):
+            word = "".join(
+                [
+                    letter
+                    for letter in words[offset]
+                    if letter not in set(string.punctuation)
+                ]
+            )
+            look_for_matches.append(word)
+
+        # print(f"looking for {filtered_tg[i].mark} in {look_for_matches}")
+        correct_match_index = look_for_matches.index(filtered_tg[i].mark)
+        
+        for delete_index in range(i, i + correct_match_index):
+            print(f"deleting words {words[delete_index]}")
+            del words[delete_index]
+        
+        # print(f"correct match {correct_match_index} {filtered_tg[i].mark} == {words[i]}")
+    return " ".join(words)
+
+
+def generate_timestamps(filename, text: str) -> list[Timestamp]:
+       
     tg = textgrid.TextGrid.fromFile(filename)
     # tg[0] is the list of words
     # filter to remove pauses
@@ -104,11 +132,10 @@ def parse_textgrid(filename, text_segments: list[str]):
         lambda x: not x.mark == "" and not x.mark.startswith("<"), tg[0]
     )
     filtered_tg = list(filtered_tg)
-    print(f"filtered_tg is {len(filtered_tg)} long ")
-
-    words = " ".join(text_segments).split()
-    for i in range(min(len(filtered_tg), len(words))):
-        print(f"{filtered_tg[i]} - {words[i]}")
+    print(f"filtered_tg is {len(filtered_tg)} long")
+    
+    text = remove_differences_to_textgrid(filtered_tg, text)
+    text_segments = generate_text_list(text)
 
     timestamps: list[Timestamp] = []
     for index, segment in enumerate(text_segments[:-1]):
@@ -140,9 +167,7 @@ def generate_combined_text_clip(
     text: str, resolution: Tuple[float, float], textgrid_filename: str
 ):
     text_clips: list[TextClip] = []
-    text_sections: list[str] = generate_text_list(text)
-    print(f"splitting text into {len(text_sections)} clips")
-    timestamps: list[Timestamp] = parse_textgrid(textgrid_filename, text_sections)
+    timestamps: list[Timestamp] = generate_timestamps(textgrid_filename, text)
 
     text_box_size = (resolution[0] * 0.8, 0)
 

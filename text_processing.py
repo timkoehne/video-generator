@@ -52,6 +52,7 @@ def text_cleanup(text: str) -> str:
         "tldr",
         "tl;dr",
         "tl:dr",
+        "tl,dr",
         "update:",
         "disclaimer",
     ]
