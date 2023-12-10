@@ -7,6 +7,7 @@ import textgrid
 from typing import Literal, Tuple
 
 from moviepy import *
+from configuration import Configuration
 from video_utils import (
     check_if_valid_post,
     crop_to_center_and_resize,
@@ -17,6 +18,9 @@ from video_utils import (
 from openai_interface import OpenAiInterface
 
 from reddit_requests import Post, PostSearch
+
+config = Configuration()
+
 
 mfa_dictionary_names = {
     "english": ["english_us_arpa", "english_us_arpa"],
@@ -65,14 +69,7 @@ def generate_story_clip(
     combined_text_clip = concatenate_videoclips([intro, combined_text_clip, outro])
     combined_text_clip = combined_text_clip.with_position("center")
 
-    backgroundVideo: VideoClip = select_background_video(
-        combined_text_clip.duration + 0.75
-    )
-    backgroundVideo = crop_to_center_and_resize(backgroundVideo, resolution)
-
-    result: VideoClip = CompositeVideoClip([backgroundVideo, combined_text_clip])
-
-    return result
+    return combined_text_clip
 
 
 def align_audio_and_text(audiofile: str, textfile: str, language: str):
@@ -100,7 +97,6 @@ def align_audio_and_text(audiofile: str, textfile: str, language: str):
 def remove_differences_to_textgrid(filtered_tg, text: str) -> str:
     words = text.split()
     for i in range(0, len(filtered_tg)):
-
         look_for_matches = []
         for offset in range(i, min(i + 3, len(words))):
             word = "".join(
@@ -114,17 +110,16 @@ def remove_differences_to_textgrid(filtered_tg, text: str) -> str:
 
         correct_match_index = look_for_matches.index(filtered_tg[i].mark)
         # print(f"looking for {filtered_tg[i].mark} in {look_for_matches}, choosing {look_for_matches[correct_match_index]}")
-        
+
         for delete_index in range(i, i + correct_match_index):
             print(f"deleting words {words[delete_index]}")
             del words[delete_index]
-        
+
         # print(f"correct match {correct_match_index} {filtered_tg[i].mark} == {words[i]}")
     return " ".join(words)
 
 
 def generate_timestamps(filename, text: str) -> list[Timestamp]:
-       
     tg = textgrid.TextGrid.fromFile(filename)
     # tg[0] is the list of words
     # filter to remove pauses
@@ -133,7 +128,7 @@ def generate_timestamps(filename, text: str) -> list[Timestamp]:
     )
     filtered_tg = list(filtered_tg)
     print(f"filtered_tg is {len(filtered_tg)} long")
-    
+
     text = remove_differences_to_textgrid(filtered_tg, text)
     text_segments = generate_text_list(text)
 
@@ -192,11 +187,11 @@ def generate_text_clip(text: str, size: Tuple[float, float]):
     return TextClip(
         text=text,
         method="caption",
-        color="white",
-        font="Arial-Black",
-        font_size=70,
-        stroke_color="black",
-        stroke_width=5,
+        color=config.text_clips_font_color,
+        font=config.text_clips_font,
+        font_size=config.text_clips_font_size,
+        stroke_color=config.text_clips_font_stroke_color,
+        stroke_width=config.text_clips_font_stroke_width,
         size=(size[0], size[1]),
         align="center",
     )

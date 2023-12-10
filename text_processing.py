@@ -136,6 +136,11 @@ def text_cleanup(text: str) -> str:
         text = text.replace(match, replace_with)
         # print(f"replacing {match} with {replace_with}")
 
+    for match in re.findall("\.\.\.\.+", text):
+        replace_with = "..."
+        text = text.replace(match, replace_with)
+        # print(f"replacing {match} with {replace_with}")
+
     for match in re.findall("[a-zA-Z]\.\.\.[a-zA-Z]", text):
         replace_with = "... ".join(match.split("..."))
         text = text.replace(match, replace_with)

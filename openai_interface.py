@@ -8,17 +8,15 @@ from openai import OpenAI
 from PIL import Image
 from io import BytesIO
 import base64
+from configuration import Configuration
 
 from text_processing import split_text_to_max_x_chars
 
 
 class OpenAiInterface:
     def __init__(self) -> None:
-        with open("config/secrets.json", "r") as file:
-            secrets = json.loads(file.read())
-            openai_api_key = secrets["openai_api_key"]
-
-        self.client = OpenAI(api_key=openai_api_key)
+        self.config = Configuration()
+        self.client = OpenAI(api_key=self.config.openai_api_key)
 
     def generate_image(
         self,
@@ -67,9 +65,9 @@ class OpenAiInterface:
         self,
         text: str,
         filepath: str,
-        model: str = "tts-1",
-        voice: Literal["alloy", "echo", "fable", "onyx", "nova", "shimmer"] = "fable",
     ):
+        
+        
         filename = filepath[: filepath.index(".")]
         ext = filepath[filepath.index(".") + 1 :]
 
@@ -77,7 +75,7 @@ class OpenAiInterface:
 
         if len(text_segments) < 2:
             response = self.client.audio.speech.create(
-                input=text, model="tts-1", voice=voice, response_format="mp3"
+                input=text, model=self.config.audio_model, voice=self.config.audio_voice, response_format="mp3"
             )
             response.stream_to_file(filename + ".mp3")
         else:
@@ -91,8 +89,8 @@ class OpenAiInterface:
 
                 response = self.client.audio.speech.create(
                     input=text_segment,
-                    model="tts-1",
-                    voice=voice,
+                    model=self.config.audio_model,
+                    voice=self.config.audio_voice,
                 )
 
                 tmp_file_name: str = filename + "-" + str(index) + ".mp3"

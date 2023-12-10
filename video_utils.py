@@ -7,26 +7,27 @@ from moviepy.video.fx import resize, crop
 from moviepy.audio.fx import multiply_volume
 from moviepy import *
 from typing import Tuple
+from configuration import Configuration
 from openai_interface import OpenAiInterface
 
 from reddit_requests import Post
 
+config = Configuration()
 
-BACKGROUND_VIDEO_PATH = "f:/background_videos/"
 POSSIBLE_FILE_ENDINGS = (".mp4", ".webm", ".mkv", ".ogv", ".mpeg", ".avi", ".mov")
 
 CHARS_PER_SECOND = (10000 / 10.5) / 60
-DURATION_OFFSET_PERCENT = 0.25
 
 
-def select_background_video(min_length: int, max_attempts: int = 50) -> VideoClip:
+def select_background_video(min_length: int, max_attempts: int = 50) -> Tuple[VideoClip, str]:
     possible_videos = [
         p.resolve()
-        for p in Path(BACKGROUND_VIDEO_PATH).glob("**/*")
+        for p in Path(config.background_videos_dir).glob("**/*")
         if p.suffix in POSSIBLE_FILE_ENDINGS
     ]
 
     selected_file = possible_videos[randrange(0, len(possible_videos))]
+    background_video_credit = str(selected_file).split("\\")[-2]
     clip: VideoClip = VideoFileClip(selected_file)
     print(f"selected {selected_file} as background video")
 
@@ -35,7 +36,7 @@ def select_background_video(min_length: int, max_attempts: int = 50) -> VideoCli
             print(
                 f"retrying for background video since it isn't long enough: Attempts left: {max_attempts}"
             )
-            clip = select_background_video(min_length, max_attempts - 1)
+            clip, background_video_credit = select_background_video(min_length, max_attempts - 1)
         else:
             raise Exception("No suitable background video found")
 
@@ -52,7 +53,7 @@ def select_background_video(min_length: int, max_attempts: int = 50) -> VideoCli
     clip = clip.subclip(start_time, end_time)
     clip = clip.afx(multiply_volume, 0.1)
 
-    return clip
+    return (clip, background_video_credit)
 
 
 def crop_to_center_and_resize(clip: VideoClip, to_resolution: Tuple[int, int]):
@@ -70,13 +71,13 @@ def crop_to_center_and_resize(clip: VideoClip, to_resolution: Tuple[int, int]):
 def generate_intro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     openaiinterface = OpenAiInterface()
     intro_text = openaiinterface.generate_text_without_context(
-        "write an intro for a youtube video in two sentences. Today's topic is this story that someone posted. Do not mention a channel name.",
+        config.intro_prompt,
         post.title + "\n" + post.selftext,
     )
     openaiinterface.generate_mp3(intro_text, f"tmp/{post.post_id}-audio-intro.mp3")
 
     intro_clip: VideoClip = TextClip(
-        "Today's Topic:\n" + post.title,
+        config.intro_header + "\n" + post.title,
         size=(resolution[0] * 0.8, 0),
         color="white",
         font="Arial-Black",
@@ -98,7 +99,7 @@ def generate_intro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
 def generate_outro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     openaiinterface = OpenAiInterface()
     outro_text = openaiinterface.generate_text_without_context(
-        "write an outro for a youtube video in two sentences. Today's topic was this story that someone posted. Do not mention a channel name.",
+        config.outro_prompt,
         post.title + "\n" + post.selftext,
     )
     openaiinterface.generate_mp3(outro_text, f"tmp/{post.post_id}-audio-outro.mp3")
@@ -112,11 +113,11 @@ def generate_outro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     return outro_clip
 
 
-def create_video_title(self, text: str) -> str:
+def create_video_title(post: Post) -> str:
     openaiinterface = OpenAiInterface()
 
     response = openaiinterface.generate_text_without_context(
-        "write a youtube video title based on this", text
+        config.video_title_prompt, post.title + "\n" + post.selftext
     )
     return response
 
@@ -143,15 +144,17 @@ def check_if_valid_post(
     if post_title.lower().startswith("update "):
         print(f"Post {post_id} is an update")
         return False
-    
+
     print(approx_video_duration)
     if approx_video_duration != None and not is_approx_duration(
-        post_id, text_to_check, approx_video_duration
+        text_to_check, approx_video_duration
     ):
-        print(f"Post {post_id} duration is not approximatly {approx_video_duration} long.")
+        print(
+            f"Post {post_id} duration is not approximatly {approx_video_duration} long."
+        )
         return False
 
-    if min_duration != None and not is_min_duration(post_id, text_to_check, min_duration):
+    if min_duration != None and not is_min_duration(text_to_check, min_duration):
         print(f"Post {post_id} duration is not over {min_duration} long.")
         return False
 
@@ -159,30 +162,32 @@ def check_if_valid_post(
     return True
 
 
-def is_max_duration(post_id: str, text: str, max_duration: timedelta) -> bool:
+def is_max_duration(text: str, max_duration: timedelta) -> bool:
     text_duration = len(text) / CHARS_PER_SECOND
     if max_duration.total_seconds() < text_duration:
         return False
     return True
 
 
-def is_min_duration(post_id: str, text: str, min_duration: timedelta) -> bool:
+def is_min_duration(text: str, min_duration: timedelta) -> bool:
     text_duration = len(text) / CHARS_PER_SECOND
     if min_duration.total_seconds() > text_duration:
         return False
     return True
 
 
-def is_between_durations(post_id: str, text: str, min_duration: timedelta, max_duration: timedelta) -> bool:
-    if is_min_duration(post_id, text, min_duration) and is_max_duration(post_id, text, max_duration):
+def is_between_durations(
+    text: str, min_duration: timedelta, max_duration: timedelta
+) -> bool:
+    if is_min_duration(text, min_duration) and is_max_duration(text, max_duration):
         return True
     return False
 
 
-def is_approx_duration(post_id: str, text: str, approx_duration: timedelta) -> bool:
-    upper_bound = approx_duration + (approx_duration * DURATION_OFFSET_PERCENT)
-    lower_bound = approx_duration - (approx_duration * DURATION_OFFSET_PERCENT)
+def is_approx_duration(text: str, approx_duration: timedelta) -> bool:
+    upper_bound = approx_duration + (approx_duration * config.tolerated_duration_offset)
+    lower_bound = approx_duration - (approx_duration * config.tolerated_duration_offset)
 
-    if is_between_durations(post_id, text, lower_bound, upper_bound):
+    if is_between_durations(text, lower_bound, upper_bound):
         return True
     return False

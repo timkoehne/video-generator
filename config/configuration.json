@@ -1,0 +1,27 @@
+{
+    "audio_api": "openai",
+    "audio_model": "tts-1",
+    "audio_voice": "fable",
+    "video_fps": 25,
+    "num_threads": 12,
+    "write_video_preset": "veryfast",
+    "output_dir": "F:/finished_videos/",
+    "background_videos_dir": "F:/background_videos/",
+    "tolerated_duration_offset": 0.25,
+    "text_clips_font": "Arial-Black",
+    "text_clips_font_color": "white",
+    "text_clips_font_size": 70,
+    "text_clips_font_stroke_width": 5,
+    "text_clips_font_stroke_color": "black",
+    "text_wall_font": "Arial-Black",
+    "text_wall_font_color": "white",
+    "text_wall_font_size": 70,
+    "text_wall_font_stroke_width": 3,
+    "text_wall_font_stroke_color": "black",
+    "intro_header": "Today's Headline:",
+    "intro_prompt": "write an intro for a youtube video in two sentences. Today's topic is this story that someone posted. Do not mention a channel name.",
+    "outro_prompt": "write an outro for a youtube video in two sentences. Today's topic was this story that someone posted. Do not mention a channel name",
+    "summary_prompt": "",
+    "video_title_prompt": "write a youtube video title based on this"
+
+}

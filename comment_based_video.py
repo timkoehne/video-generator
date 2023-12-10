@@ -3,6 +3,7 @@ from random import randrange
 from typing import Literal, Tuple
 
 from moviepy import *
+from configuration import Configuration
 from video_utils import (
     CHARS_PER_SECOND,
     check_if_valid_post,
@@ -15,8 +16,13 @@ from openai_interface import OpenAiInterface
 from reddit_requests import Comment, Post, PostSearch
 from text_processing import split_text_to_max_x_chars
 
+config = Configuration()
+
 
 def calculate_font_size(text: str) -> Tuple[list[str], list[int]]:
+    
+    # TODO implement text_wall_font_size configuration option
+    
     text_parts: list[str] = split_text_to_max_x_chars(text, 550)
     font_sizes: list[int] = []
 
@@ -48,12 +54,12 @@ def generate_single_comment_clip(
         clip_part: VideoClip = TextClip(
             part,
             size=(resolution[0] * 0.8, 0),
-            color="white",
-            font="Arial-Black",
+            color=config.text_wall_font_color,
+            font=config.text_wall_font,
             font_size=font_sizes[i],
             method="caption",
-            stroke_color="black",
-            stroke_width=3,
+            stroke_color=config.text_wall_font_stroke_color,
+            stroke_width=config.text_wall_font_stroke_width,
             align="center",
         )
 
@@ -88,18 +94,14 @@ def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip
     combined_text_video: VideoClip = concatenate_videoclips(text_clips)
     combined_text_video = concatenate_videoclips([intro, combined_text_video, outro])
     combined_text_video = combined_text_video.with_position("center")
-
-    background_video: VideoClip = select_background_video(combined_text_video.duration)
-    background_video = crop_to_center_and_resize(background_video, resolution)
-    result = CompositeVideoClip([background_video, combined_text_video])
-    return result
+    return combined_text_video
 
 
 def find_comment_post(
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
     subreddit_list: list[str],
-    approx_video_duration: timedelta,
+    approx_video_duration: timedelta | None = None,
 ):
     maxAttempts = 50
     while True:
@@ -110,11 +112,14 @@ def find_comment_post(
             continue
         selected_post = search.posts[randrange(0, len(search.posts))]
 
-        good_comments = selected_post.get_good_comments(
-            num_chars_to_limit_comments=int(
-                approx_video_duration.total_seconds() * CHARS_PER_SECOND
+        if approx_video_duration != None:
+            good_comments = selected_post.get_good_comments(
+                num_chars_to_limit_comments=int(
+                    approx_video_duration.total_seconds() * CHARS_PER_SECOND
+                )
             )
-        )
+        else:
+            good_comments = selected_post.get_good_comments()
 
         comments_combined = " ".join([c.body for c in good_comments])
 

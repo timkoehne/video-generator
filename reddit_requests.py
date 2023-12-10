@@ -64,7 +64,7 @@ class Post:
         self.selftext = text_cleanup(self.selftext)
 
     def get_good_comments(
-        self, score_threshold: int = 100, num_chars_to_limit_comments: int = 5000
+        self, score_threshold: int = 300, num_chars_to_limit_comments: int | None = None
     ):
         if len(self.comments) == 0:
             self.load_comments("top")
@@ -94,12 +94,14 @@ class Post:
         )[:-1]
         print(f"After score filtering there are {len(filtered_comments)} comments left")
 
-        for index, comment in enumerate(filtered_comments):
-            if num_chars_to_limit_comments - len(comment.body) < 0:
-                filtered_comments = filtered_comments[:index]
-                break
-            num_chars_to_limit_comments -= len(comment.body)
-            print(num_chars_to_limit_comments)
+
+        if num_chars_to_limit_comments != None: 
+            for index, comment in enumerate(filtered_comments):
+                if num_chars_to_limit_comments - len(comment.body) < 0:
+                    filtered_comments = filtered_comments[:index]
+                    break
+                num_chars_to_limit_comments -= len(comment.body)
+                print(num_chars_to_limit_comments)
 
         print(f"Limiting to {len(filtered_comments)} comments")
         return filtered_comments
