@@ -112,8 +112,8 @@ def remove_differences_to_textgrid(filtered_tg, text: str) -> str:
             )
             look_for_matches.append(word)
 
-        # print(f"looking for {filtered_tg[i].mark} in {look_for_matches}")
         correct_match_index = look_for_matches.index(filtered_tg[i].mark)
+        # print(f"looking for {filtered_tg[i].mark} in {look_for_matches}, choosing {look_for_matches[correct_match_index]}")
         
         for delete_index in range(i, i + correct_match_index):
             print(f"deleting words {words[delete_index]}")
@@ -244,7 +244,7 @@ def find_story_post(
             selected_post.post_id,
             selected_post.title,
             selected_post.selftext,
-            approx_video_duration,
+            approx_video_duration=approx_video_duration,
         )
 
         if valid:

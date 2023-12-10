@@ -19,7 +19,7 @@ CHARS_PER_SECOND = (10000 / 10.5) / 60
 DURATION_OFFSET_PERCENT = 0.25
 
 
-def select_background_video(min_length: int, max_attempts: int = 10) -> VideoClip:
+def select_background_video(min_length: int, max_attempts: int = 50) -> VideoClip:
     possible_videos = [
         p.resolve()
         for p in Path(BACKGROUND_VIDEO_PATH).glob("**/*")
@@ -40,13 +40,13 @@ def select_background_video(min_length: int, max_attempts: int = 10) -> VideoCli
             raise Exception("No suitable background video found")
 
     print(
-        f"clip duration {clip.duration} and min_length {min_length} combined: {floor(clip.duration - min_length)}"
+        f"clip duration is {clip.duration:.2f}s and min_length is {min_length:.2f}s leaving {floor(clip.duration - min_length)}s to select start position from"
     )
     start_time = random.random() * (clip.duration - min_length)
     end_time = start_time + min_length
 
     print(
-        f"using background video time between {start_time}s and {end_time}s out of {clip.duration}s"
+        f"using background video time between {start_time:.2f}s and {end_time:.2f}s out of {clip.duration:.2f}s"
     )
 
     clip = clip.subclip(start_time, end_time)
@@ -122,7 +122,11 @@ def create_video_title(self, text: str) -> str:
 
 
 def check_if_valid_post(
-    post_id: str, post_title: str, text_to_check: str, approx_video_duration: timedelta
+    post_id: str,
+    post_title: str,
+    text_to_check: str,
+    approx_video_duration: timedelta | None = None,
+    min_duration: timedelta | None = None,
 ) -> bool:
     with open("config/already_posted.txt", "r") as file:
         already_posted_ids = file.read().splitlines()
@@ -139,21 +143,46 @@ def check_if_valid_post(
     if post_title.lower().startswith("update "):
         print(f"Post {post_id} is an update")
         return False
+    
+    print(approx_video_duration)
+    if approx_video_duration != None and not is_approx_duration(
+        post_id, text_to_check, approx_video_duration
+    ):
+        print(f"Post {post_id} duration is not approximatly {approx_video_duration} long.")
+        return False
 
-    expected_duration_seconds = approx_video_duration.total_seconds()
-    duration_lower_bound = expected_duration_seconds - (
-        expected_duration_seconds * DURATION_OFFSET_PERCENT
-    )
-    duration_upper_bound = expected_duration_seconds + (
-        expected_duration_seconds * DURATION_OFFSET_PERCENT
-    )
-    # print(f"looking for a post that takes between {duration_lower_bound} and {duration_upper_bound} seconds")
-    post_duration = len(text_to_check) / CHARS_PER_SECOND
-    if duration_lower_bound > post_duration or post_duration > duration_upper_bound:
-        print(
-            f"Post {post_id} duration {post_duration} is not within {DURATION_OFFSET_PERCENT*100}% of {expected_duration_seconds}"
-        )
+    if min_duration != None and not is_min_duration(post_id, text_to_check, min_duration):
+        print(f"Post {post_id} duration is not over {min_duration} long.")
         return False
 
     print(f"Post {post_id} is valid")
     return True
+
+
+def is_max_duration(post_id: str, text: str, max_duration: timedelta) -> bool:
+    text_duration = len(text) / CHARS_PER_SECOND
+    if max_duration.total_seconds() < text_duration:
+        return False
+    return True
+
+
+def is_min_duration(post_id: str, text: str, min_duration: timedelta) -> bool:
+    text_duration = len(text) / CHARS_PER_SECOND
+    if min_duration.total_seconds() > text_duration:
+        return False
+    return True
+
+
+def is_between_durations(post_id: str, text: str, min_duration: timedelta, max_duration: timedelta) -> bool:
+    if is_min_duration(post_id, text, min_duration) and is_max_duration(post_id, text, max_duration):
+        return True
+    return False
+
+
+def is_approx_duration(post_id: str, text: str, approx_duration: timedelta) -> bool:
+    upper_bound = approx_duration + (approx_duration * DURATION_OFFSET_PERCENT)
+    lower_bound = approx_duration - (approx_duration * DURATION_OFFSET_PERCENT)
+
+    if is_between_durations(post_id, text, lower_bound, upper_bound):
+        return True
+    return False
