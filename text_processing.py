@@ -74,10 +74,10 @@ def text_cleanup(text: str) -> str:
         "made this account",
         "is the right subreddit",
         "spelling",
-        "formatting", 
+        "formatting",
         "first time posting",
         "first post",
-        "in r/"
+        "in r/",
     ]
     for phrase in to_remove_paragraph_if_included:
         if phrase in text.lower()[: int(len(text) * 0.3)]:

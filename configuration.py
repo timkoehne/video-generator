@@ -14,6 +14,7 @@ class Configuration:
         self.intro_prompt: str = config["intro_prompt"]
         self.outro_prompt: str = config["outro_prompt"]
         self.video_title_prompt: str = config["video_title_prompt"]
+        self.background_video_volume: float = config["background_video_volume"]
 
         self.init_text_clips(config)
         self.init_text_wall(config)

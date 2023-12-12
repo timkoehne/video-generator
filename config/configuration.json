@@ -20,8 +20,9 @@
     "text_wall_font_stroke_color": "black",
     "intro_header": "Today's Headline:",
     "intro_prompt": "write an intro for a youtube video in two sentences. Today's topic is this story that someone posted. Do not mention a channel name.",
-    "outro_prompt": "write an outro for a youtube video in two sentences. Today's topic was this story that someone posted. Do not mention a channel name",
+    "outro_prompt": "write an outro for a youtube video in two sentences. Today's topic was this story that someone posted. Do not mention a channel name.",
     "summary_prompt": "",
-    "video_title_prompt": "write a youtube video title based on this"
+    "video_title_prompt": "write a youtube video title based on this. No quotation marks.",
+    "background_video_volume": 0.1
 
 }

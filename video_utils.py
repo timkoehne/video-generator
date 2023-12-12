@@ -19,39 +19,34 @@ POSSIBLE_FILE_ENDINGS = (".mp4", ".webm", ".mkv", ".ogv", ".mpeg", ".avi", ".mov
 CHARS_PER_SECOND = (10000 / 10.5) / 60
 
 
-def select_background_video(min_length: int, max_attempts: int = 50) -> Tuple[VideoClip, str]:
+def select_background_video(min_length: int) -> Tuple[VideoClip, str]:
     possible_videos = [
         p.resolve()
         for p in Path(config.background_videos_dir).glob("**/*")
         if p.suffix in POSSIBLE_FILE_ENDINGS
     ]
 
-    selected_file = possible_videos[randrange(0, len(possible_videos))]
-    background_video_credit = str(selected_file).split("\\")[-2]
-    clip: VideoClip = VideoFileClip(selected_file)
-    print(f"selected {selected_file} as background video")
+    clip: VideoClip | None = None
+    background_video_credit: str | None = None
 
-    if min_length > clip.duration:
-        if max_attempts > 0:
+    random.shuffle(possible_videos)
+    for video in possible_videos:
+        clip = VideoFileClip(video)
+        if min_length <= clip.duration:
+            selected_file = video
+            background_video_credit = str(selected_file).split("\\")[-2]
+            print(f"selected {selected_file} as background video")
+            start_time = random.random() * (clip.duration - min_length)
+            end_time = start_time + min_length
             print(
-                f"retrying for background video since it isn't long enough: Attempts left: {max_attempts}"
+                f"using background video time between {start_time:.2f}s and {end_time:.2f}s out of {clip.duration:.2f}s"
             )
-            clip, background_video_credit = select_background_video(min_length, max_attempts - 1)
-        else:
-            raise Exception("No suitable background video found")
+            clip = clip.subclip(start_time, end_time)
+            clip = clip.afx(multiply_volume, config.background_video_volume)  # type: ignore
+            break
 
-    print(
-        f"clip duration is {clip.duration:.2f}s and min_length is {min_length:.2f}s leaving {floor(clip.duration - min_length)}s to select start position from"
-    )
-    start_time = random.random() * (clip.duration - min_length)
-    end_time = start_time + min_length
-
-    print(
-        f"using background video time between {start_time:.2f}s and {end_time:.2f}s out of {clip.duration:.2f}s"
-    )
-
-    clip = clip.subclip(start_time, end_time)
-    clip = clip.afx(multiply_volume, 0.1)
+    if clip == None or background_video_credit == None:
+        raise Exception(f"No suitable background video found for duration {min_length}")
 
     return (clip, background_video_credit)
 
@@ -115,10 +110,10 @@ def generate_outro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
 
 def create_video_title(post: Post) -> str:
     openaiinterface = OpenAiInterface()
-
     response = openaiinterface.generate_text_without_context(
         config.video_title_prompt, post.title + "\n" + post.selftext
     )
+    response = f"{response} | r/{post.subreddit} Reddit Stories"
     return response
 
 
@@ -135,7 +130,7 @@ def check_if_valid_post(
         print(f"Post {post_id} has already been posted")
         return False
 
-    filter_word_in_title = ["update:", "(update)"]
+    filter_word_in_title = ["update:", "(update)", "[update]"]
     for word in filter_word_in_title:
         if word in post_title.lower():
             print(f"Post {post_id} is an update")

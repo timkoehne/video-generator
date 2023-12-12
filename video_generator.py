@@ -10,6 +10,7 @@ from reddit_requests import Post, PostSearch, create_post_from_post_id
 from comment_based_video import find_comment_post, generate_comments_clip
 from story_based_video import find_story_post, generate_story_clip
 from video_utils import (
+    check_if_valid_post,
     create_video_title,
     crop_to_center_and_resize,
     is_between_durations,
@@ -114,7 +115,6 @@ def generate_description(
 
     with open(config.background_videos_dir + "channel_urls.json", "r") as file:
         credit_url = json.loads(file.read())[background_credit]
-        print(background_credit + "\n" + credit_url)
         background_credit = f"The background gameplay is by {background_credit}. Check them out at:\n{credit_url}\n"
 
     openai_disclaimer = f'The audio is AI-generated from {config.audio_api}\'s text-to-speech model "{config.audio_model}" with the voice "{config.audio_voice}".'
@@ -146,13 +146,18 @@ def save_video_and_details(
     )
 
 
-generate_story_video((1920, 1080), "all", "top", datetime.timedelta(minutes=5))
+# generate_story_video((1920, 1080), "all", "top", datetime.timedelta(minutes=5))
 # generate_comment_video((1920, 1080), "all", "top", datetime.timedelta(minutes=5))
 
-# ps = PostSearch("confession", "top", "all")
-# for post in ps.posts[1:]:
-#     if is_between_durations(post.post_id, post.selftext, datetime.timedelta(minutes=4), datetime.timedelta(minutes=25)):
-#         generate_story_video_by_id(post.post_id, (1920, 1080))
+
+with open("config/reddit_threads.json", "r") as file:
+    for subreddit in json.loads(file.read())["story_based"]:
+        ps = PostSearch(subreddit, "top", "all")
+        for post in ps.posts:
+            if check_if_valid_post(post.post_id, post.title, post.selftext):
+                if is_between_durations(post.selftext, datetime.timedelta(minutes=4), datetime.timedelta(minutes=25)):
+                    print(f"{post.post_id} is within specified time")
+                    generate_story_video_by_id(post.post_id, (1920, 1080))
 
 
 # ps = PostSearch("EntitledPeople", "top", "month")

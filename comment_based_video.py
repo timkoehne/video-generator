@@ -20,9 +20,8 @@ config = Configuration()
 
 
 def calculate_font_size(text: str) -> Tuple[list[str], list[int]]:
-    
     # TODO implement text_wall_font_size configuration option
-    
+
     text_parts: list[str] = split_text_to_max_x_chars(text, 550)
     font_sizes: list[int] = []
 
