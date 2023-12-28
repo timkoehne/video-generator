@@ -22,7 +22,14 @@
     "intro_prompt": "write an intro for a youtube video in two sentences. Today's topic is this story that someone posted. Do not mention a channel name.",
     "outro_prompt": "write an outro for a youtube video in two sentences. Today's topic was this story that someone posted. Do not mention a channel name.",
     "summary_prompt": "",
-    "video_title_prompt": "write a youtube video title based on this. No quotation marks.",
-    "background_video_volume": 0.1
+    "video_title_prompt": "write a clickbaity youtube video title in 9 words. No quotation marks.",
+    "background_video_volume": 0.1,
+    "thumbnail_image_dir": "F:/images_without_background/",
+    "thumbnail_text_width_percent": 0.6,
+    "thumbnail_allowed_overlap": 0.15,
+    "thumbnail_edge_width": 20,
+    "thumbnail_person_aspect_ratio_min": 0.25,
+    "thumbnail_person_aspect_ratio_max": 0.25
+
 
 }

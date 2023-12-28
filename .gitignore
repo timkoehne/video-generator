@@ -11,5 +11,6 @@ image.png
 mask.png
 output-0.png
 test.py
+channel_images
 
 __pycache__/

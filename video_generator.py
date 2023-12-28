@@ -9,6 +9,7 @@ from openai_interface import OpenAiInterface
 from reddit_requests import Post, PostSearch, create_post_from_post_id
 from comment_based_video import find_comment_post, generate_comments_clip
 from story_based_video import find_story_post, generate_story_clip
+from thumbnail import generate_thumbnail
 from video_utils import (
     check_if_valid_post,
     create_video_title,
@@ -42,7 +43,7 @@ def generate_story_video(
     resolution: Tuple[int, int],
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
-    approx_video_duration: datetime.timedelta = datetime.timedelta(minutes=5)
+    approx_video_duration: datetime.timedelta = datetime.timedelta(minutes=5),
 ):
     selected_post = find_story_post(
         timeframe, listing, reddit_threads["story_based"], approx_video_duration
@@ -54,7 +55,7 @@ def generate_comment_video(
     resolution: Tuple[int, int],
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
-    approx_video_duration: datetime.timedelta = datetime.timedelta(minutes=5)
+    approx_video_duration: datetime.timedelta = datetime.timedelta(minutes=5),
 ):
     selected_post = find_comment_post(
         timeframe, listing, reddit_threads["comment_based"], approx_video_duration
@@ -150,21 +151,15 @@ def save_video_and_details(
 # generate_comment_video((1920, 1080), "all", "top", datetime.timedelta(minutes=5))
 
 
-with open("config/reddit_threads.json", "r") as file:
-    for subreddit in json.loads(file.read())["story_based"]:
-        ps = PostSearch(subreddit, "top", "all")
-        for post in ps.posts:
-            if check_if_valid_post(post.post_id, post.title, post.selftext):
-                if is_between_durations(post.selftext, datetime.timedelta(minutes=4), datetime.timedelta(minutes=25)):
-                    print(f"{post.post_id} is within specified time")
-                    generate_story_video_by_id(post.post_id, (1920, 1080))
+# with open("config/reddit_threads.json", "r") as file:
+#     for subreddit in json.loads(file.read())["story_based"]:
+#         ps = PostSearch(subreddit, "top", "all")
+#         for post in ps.posts:
+#             if check_if_valid_post(post.post_id, post.title, post.selftext):
+#                 if is_between_durations(post.selftext, datetime.timedelta(minutes=4), datetime.timedelta(minutes=25)):
+#                     print(f"{post.post_id} is within specified time")
+#                     generate_story_video_by_id(post.post_id, (1920, 1080))
 
-
-# ps = PostSearch("EntitledPeople", "top", "month")
-# for p in ps.posts:
-#     print(p.selftext)
-#     print(check_if_valid_post(p.post_id, p.title, p.selftext, datetime.timedelta(minutes=5)))
-#     input()
 
 # TODO remove urls
 # TODO error handling
@@ -177,3 +172,15 @@ with open("config/reddit_threads.json", "r") as file:
 
 # TODO audio and text sometimes desync for a short time noticable in joz1c5.
 # probably also caused overlapping audio with the outro
+
+# p = create_post_from_post_id("itlugo")
+background_video, _ = select_background_video(120)
+
+# # title = create_video_title(p)
+title = "Unlock Grandma's Epic Revenge on Greedy Preachers at Funeral!"
+if "|" in title:
+    title = title[: title.index("|")]
+
+keywords = ["caucasian", "man", "frustrated"]
+
+generate_thumbnail(title, background_video, keywords)
