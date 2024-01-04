@@ -18,7 +18,7 @@ class PostSearch:
     ) -> None:
         try:
             print(f"Trying to access {listing} posts of {timeframe} from {subreddit}")
-            base_url = f"https://www.reddit.com/r/{subreddit}/{listing}.json?t={timeframe}"  # &limit={limit}
+            base_url = f"https://www.reddit.com/r/{subreddit}/{listing}.json?sr_detail=1&t={timeframe}"  # &limit={limit}
             print(base_url)
             request = requests.get(base_url, headers={"User-agent": useragent})
             posts_listing = request.json()
@@ -67,6 +67,9 @@ class Post:
         self.downvotes: int = int(get_parameter(post, "downs"))
         self.score: int = int(get_parameter(post, "score"))
         self.url: str = get_parameter(post, "url")
+        self.num_comments: int = get_parameter(post, "num_comments")
+        sr_detail = get_parameter(post, "sr_detail")
+        self.subreddit_icon_url: str = sr_detail["icon_img"] # type: ignore
         self.comments: list[Comment] = []
 
         self.selftext = text_cleanup(self.selftext)
@@ -150,7 +153,7 @@ class Comment:
 
 
 def create_post_from_post_id(post_id: str) -> Post:
-    base_url = f"https://www.reddit.com/{post_id}.json"
+    base_url = f"https://www.reddit.com/{post_id}.json?sr_detail=1"
     print(base_url)
     request = requests.get(base_url, headers={"User-agent": useragent})
     post = request.json()[0]

@@ -10,6 +10,7 @@ from openai_interface import OpenAiInterface
 from reddit_requests import Post, PostSearch, create_post_from_post_id
 from comment_based_video import find_comment_post, generate_comments_clip
 from story_based_video import find_story_post, generate_story_clip
+from thumbnail_with_text import generate_thumbnail_with_text
 from video_utils import (
     crop_to_center_and_resize,
     select_background_video,
@@ -185,3 +186,9 @@ def save_video_and_details(video: VideoClip, post: Post):
 
 # TODO audio and text sometimes desync for a short time noticable in joz1c5.
 # probably also caused overlapping audio with the outro
+
+
+post = PostSearch("prorevenge", "top", "all").posts[0]
+print(post.post_id)
+
+image = generate_thumbnail_with_text(post, (1920, 1080))
