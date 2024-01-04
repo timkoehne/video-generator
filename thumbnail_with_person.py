@@ -9,8 +9,14 @@ import numpy as np
 
 from configuration import Configuration
 from db_access import DB_Controller
+from openai_interface import OpenAiInterface
+from reddit_requests import Post
 
 config = Configuration()
+
+
+class NoSuitablePersonException(Exception):
+    pass
 
 
 class Rectangle:
@@ -83,10 +89,10 @@ def find_thumbnail_person(bounds: Rectangle, keywords: list[str]) -> Image.Image
 
             return background
 
-    raise Exception("No suitable thumbnail person found")
+    raise NoSuitablePersonException()
 
 
-def generate_thumbnail_text_clip(title: str, resolution: Tuple[int, int]):
+def generate_thumbnail_text_clip(title: str, resolution: Tuple[int, int]) -> TextClip:
     text_max_width = int(resolution[0] * config.thumbnail_text_width_percent)
 
     text = title.split(" ")
@@ -165,19 +171,106 @@ def thumbnail_add_person(
     return thumbnail
 
 
-def generate_thumbnail(title: str, background_clip: VideoClip, keywords: list[str]):
-    resolution = (1920, 1080)
-    txt_clip = generate_thumbnail_text_clip(title, resolution)
-    thumbnail_background = generate_thumbnail_background_clip(background_clip)
-    clip = CompositeVideoClip([thumbnail_background, txt_clip])
-    thumbnail = Image.fromarray(clip.get_frame(0))
+def generalize_keywords(keywords: list[str]) -> list[str]:
+    change_made = False
+    if "mother" in keywords:
+        pos = keywords.index("mother")
+        keywords[pos] = "woman"
+        change_made = True
+    if "father" in keywords:
+        pos = keywords.index("father")
+        keywords[pos] = "man"
+        change_made = True
 
-    person_max_bounds = calculate_person_max_bounds(resolution)
-    print(
-        f"person box dimensions {person_max_bounds.width()}x{person_max_bounds.height()}"
-    )
+    if not change_made and len(keywords) > 1:
+        keywords.remove(keywords[random.randrange(0, len(keywords))])
 
-    person: Image.Image = find_thumbnail_person(person_max_bounds, keywords)
+    return keywords
 
-    thumbnail = thumbnail_add_person(thumbnail, person_max_bounds, person)
-    thumbnail.show()
+
+def generate_thumbnail(
+    title: str, background_clip: VideoClip, keywords: list[str], retries_left: int = 1
+) -> Image.Image | None:
+    try:
+        resolution = (1920, 1080)
+
+        background_image_clip = generate_thumbnail_background_clip(background_clip)
+        background_image = Image.fromarray(background_image_clip.get_frame(0))
+
+        person_max_bounds = calculate_person_max_bounds(resolution)
+        print(
+            f"person box dimensions {person_max_bounds.width()}x{person_max_bounds.height()}"
+        )
+
+        person: Image.Image = find_thumbnail_person(person_max_bounds, keywords)
+        person_and_background = thumbnail_add_person(
+            background_image, person_max_bounds, person
+        )
+        person_and_background_clip: ImageClip = ImageClip(
+            np.array(person_and_background)
+        ).with_duration(1)
+
+        txt_clip = generate_thumbnail_text_clip(title, resolution)
+        clip = CompositeVideoClip(
+            [person_and_background_clip, txt_clip], use_bgclip=True
+        )
+        thumbnail: Image.Image = Image.fromarray(clip.get_frame(0))
+        return thumbnail
+    # except NoSuitablePersonException as e:
+    except Exception as e:
+        print(e)
+        print(f"Thumbnail generation for keywords {keywords} failed")
+        if retries_left > 0:
+            new_keywords = generalize_keywords(keywords)
+            return generate_thumbnail(
+                title, background_clip, new_keywords, retries_left - 1
+            )
+
+
+def generate_thumbnails(post: Post, background_video: VideoClip, video_title: str):
+    video_title = video_title[: video_title.index("|")]
+
+    openai_test = OpenAiInterface()
+
+    db_controller = DB_Controller("database.db")
+    categories = db_controller.find_all_used_tags(min_amount=10)
+    categories.remove("human")
+    categories.remove("person")
+    categories.remove("happy")
+    categories.remove("content")
+    categories.remove("man")
+    categories.remove("woman")
+    print(categories)
+
+    attempts = []
+    num_attempts = 10
+    thumbnails_remaining = 5
+
+    while True:
+        while len(attempts) != num_attempts:
+            print("trying to categorize...")
+            response = openai_test.generate_text_without_context(
+                f"""Categorize this reddit post into these categories: {", ".join(categories)}
+Do not use any other categories.
+Generate {num_attempts} answers, one per line.
+Select 2 categories per answer and dont repeat the same answer.""",
+                f"{post.subreddit}\n{post.title}\n{post.selftext}",
+            )
+            print(response)
+            attempts = [attempt.split(", ") for attempt in response.split("\n")]
+        print(attempts)
+
+        for attemptNum, categories in enumerate(attempts):
+            print(f"Generating Thumbnail {attemptNum}")
+            image = generate_thumbnail(video_title, background_video, categories)
+            if image != None:
+                thumbnails_remaining -= 1
+                print("saving")
+                image.save(
+                    config.output_dir
+                    + post.post_id
+                    + f"/thumbnail{thumbnails_remaining} - {','.join(categories)}.jpg"
+                )
+
+                if thumbnails_remaining == 0:
+                    return

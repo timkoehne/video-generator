@@ -12,5 +12,5 @@ mask.png
 output-0.png
 test.py
 channel_images
-
+database.db
 __pycache__/

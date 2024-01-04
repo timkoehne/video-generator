@@ -54,9 +54,9 @@ class DB_Controller:
         connection = sqlite3.connect(self.db_filename)
         cursor = connection.cursor()
 
-        print(image)
+        # print(image)
         image_id = self._get_image_id(image, connection)
-        print(image_id)
+        # print(image_id)
         cursor.execute("SELECT tag_id FROM image_tags WHERE image_id=?", (image_id,))
         result = cursor.fetchall()
         # print(result)
@@ -82,13 +82,26 @@ class DB_Controller:
         for tag_id in tag_ids:
             cursor.execute("SELECT image_id FROM image_tags WHERE tag_id=?", (tag_id,))
             image_ids = [entry[0] for entry in cursor.fetchall()]
-            print(f"tag {tag_id} is assigned to the following images_ids {image_ids}")
+            # print(f"tag {tag_id} is assigned to the following images_ids {image_ids}")
             image_ids_with_tag[tag_id] = image_ids
             
         for image_id in list(image_ids_with_tag.values())[0]:
             if all(image_id in x for x in image_ids_with_tag.values()):
-                print(f"image_id {image_id} has all tags assigned to it")
+                # print(f"image_id {image_id} has all tags assigned to it")
                 images.append(self._get_image_name(image_id, connection))
             
         connection.close()
         return images
+
+    def find_all_used_tags(self, min_amount: int = 0) -> list[str]:
+        connection = sqlite3.connect(self.db_filename)
+        cursor = connection.cursor()
+        
+        cursor.execute(f"SELECT tag, COUNT(tag) AS amount FROM image_tags JOIN tags on image_tags.tag_id=tags.tag_id GROUP BY tag HAVING amount > {min_amount}")
+        res = cursor.fetchall()
+        # print(res)
+        
+        
+        tags = [value[0] for value in res]
+        connection.close()
+        return tags

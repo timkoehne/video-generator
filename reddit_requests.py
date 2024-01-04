@@ -1,4 +1,5 @@
 from random import randrange
+from typing import Literal
 import requests
 
 from text_processing import text_cleanup
@@ -7,7 +8,14 @@ useragent = "yourbot"
 
 
 class PostSearch:
-    def __init__(self, subreddit: str, listing: str, timeframe: str) -> None:
+    def __init__(
+        self,
+        subreddit: str,
+        listing: Literal[
+            "controversial", "best", "hot", "new", "random", "rising", "top"
+        ],
+        timeframe: Literal["day", "week", "month", "year", "all"],
+    ) -> None:
         try:
             print(f"Trying to access {listing} posts of {timeframe} from {subreddit}")
             base_url = f"https://www.reddit.com/r/{subreddit}/{listing}.json?t={timeframe}"  # &limit={limit}
@@ -78,13 +86,18 @@ class Post:
             )
 
         # TODO filter removed comments
-        
+
         filtered_comments = list(
-            filter(lambda comment: comment.body != "[removed]" and comment.body != "[deleted]", self.comments)
+            filter(
+                lambda comment: comment.body != "[removed]"
+                and comment.body != "[deleted]",
+                self.comments,
+            )
         )
         if len(self.comments) > len(filtered_comments):
-            print(f"ignoring {len(self.comments) - len(filtered_comments)} comments because they were removed")
-        
+            print(
+                f"ignoring {len(self.comments) - len(filtered_comments)} comments because they were removed"
+            )
 
         filtered_comments = list(
             filter(
@@ -94,8 +107,7 @@ class Post:
         )[:-1]
         print(f"After score filtering there are {len(filtered_comments)} comments left")
 
-
-        if num_chars_to_limit_comments != None: 
+        if num_chars_to_limit_comments != None:
             for index, comment in enumerate(filtered_comments):
                 if num_chars_to_limit_comments - len(comment.body) < 0:
                     filtered_comments = filtered_comments[:index]

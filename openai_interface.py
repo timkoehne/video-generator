@@ -27,6 +27,7 @@ class OpenAiInterface:
             "256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"
         ] = "1024x1024",
         quality: Literal["standard", "hd"] = "standard",
+        style: Literal["vivid", "natural"] = "vivid"
     ):
         response = self.client.images.generate(
             model=model,
@@ -35,6 +36,7 @@ class OpenAiInterface:
             quality=quality,
             n=1,
             response_format="b64_json",
+            style=style
         )
 
         name, file_type = filename.split(".")

@@ -108,15 +108,6 @@ def generate_outro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     return outro_clip
 
 
-def create_video_title(post: Post) -> str:
-    openaiinterface = OpenAiInterface()
-    response = openaiinterface.generate_text_without_context(
-        config.video_title_prompt, post.title + "\n" + post.selftext
-    )
-    response = f"{response} | r/{post.subreddit} Reddit Stories"
-    return response
-
-
 def check_if_valid_post(
     post_id: str,
     post_title: str,

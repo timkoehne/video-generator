@@ -2,6 +2,7 @@ from enum import Enum
 import json
 import datetime
 import os
+import sys
 from typing import Literal, Tuple
 from moviepy import CompositeVideoClip, VideoClip
 from configuration import Configuration
@@ -9,13 +10,8 @@ from openai_interface import OpenAiInterface
 from reddit_requests import Post, PostSearch, create_post_from_post_id
 from comment_based_video import find_comment_post, generate_comments_clip
 from story_based_video import find_story_post, generate_story_clip
-from thumbnail import generate_thumbnail
 from video_utils import (
-    check_if_valid_post,
-    create_video_title,
     crop_to_center_and_resize,
-    is_between_durations,
-    is_min_duration,
     select_background_video,
 )
 
@@ -77,7 +73,14 @@ def generate_story_video_by_id(post_id: str, resolution: Tuple[int, int]):
     background_video = crop_to_center_and_resize(background_video, resolution)
     video = CompositeVideoClip([background_video, video])
 
-    save_video_and_details(video, post, background_video_credit, "story")
+    if not os.path.exists(config.output_dir + post.post_id):
+        os.mkdir(config.output_dir + post.post_id)
+
+    save_video_and_details(video, post)
+
+    generate_and_save_description(post, background_video_credit, "story")
+    title = generate_and_save_title(post)
+    # generate_thumbnails(post, background_video, title)
 
     for f in os.listdir("tmp/"):
         if f.startswith(f"{post.post_id}"):
@@ -98,7 +101,14 @@ def generate_comment_video_by_id(post_id: str, resolution: Tuple[int, int]):
     background_video = crop_to_center_and_resize(background_video, resolution)
     video = CompositeVideoClip([background_video, video])
 
-    save_video_and_details(video, post, background_video_credit, "comment")
+    if not os.path.exists(config.output_dir + post.post_id):
+        os.mkdir(config.output_dir + post.post_id)
+
+    save_video_and_details(video, post)
+
+    generate_and_save_description(post, background_video_credit, "comment")
+    title = generate_and_save_title(post)
+    # generate_thumbnails(post, background_video, title)
 
     for f in os.listdir("tmp/"):
         if f.startswith(f"{post.post_id}"):
@@ -106,7 +116,19 @@ def generate_comment_video_by_id(post_id: str, resolution: Tuple[int, int]):
             pass
 
 
-def generate_description(
+def generate_and_save_title(post: Post) -> str:
+    openaiinterface = OpenAiInterface()
+    response = openaiinterface.generate_text_without_context(
+        config.video_title_prompt, post.title + "\n" + post.selftext
+    )
+    response = f"{response} | r/{post.subreddit} Reddit Stories"
+
+    with open(config.output_dir + post.post_id + "/title.txt", "w") as file:
+        file.write(response)
+    return response
+
+
+def generate_and_save_description(
     post: Post, background_credit: str, type_of_video: Literal["comment", "story"]
 ) -> str:
     if type_of_video == "story":
@@ -120,25 +142,15 @@ def generate_description(
 
     openai_disclaimer = f'The audio is AI-generated from {config.audio_api}\'s text-to-speech model "{config.audio_model}" with the voice "{config.audio_voice}".'
 
-    return reddit_credit + "\n" + background_credit + "\n" + openai_disclaimer
-
-
-def save_video_and_details(
-    video: VideoClip,
-    post: Post,
-    background_credit: str,
-    type_of_video: Literal["comment", "story"],
-):
-    os.mkdir(config.output_dir + post.post_id)
+    description = reddit_credit + "\n" + background_credit + "\n" + openai_disclaimer
 
     with open(config.output_dir + post.post_id + "/description.txt", "w") as file:
-        description = generate_description(post, background_credit, type_of_video)
         file.write(description)
 
-    with open(config.output_dir + post.post_id + "/title.txt", "w") as file:
-        title = create_video_title(post)
-        file.write(title)
+    return description
 
+
+def save_video_and_details(video: VideoClip, post: Post):
     video.write_videofile(
         config.output_dir + post.post_id + "/video.mp4",
         fps=config.video_fps,
@@ -159,6 +171,7 @@ def save_video_and_details(
 #                 if is_between_durations(post.selftext, datetime.timedelta(minutes=4), datetime.timedelta(minutes=25)):
 #                     print(f"{post.post_id} is within specified time")
 #                     generate_story_video_by_id(post.post_id, (1920, 1080))
+#                     sys.exit(0)
 
 
 # TODO remove urls
@@ -172,15 +185,3 @@ def save_video_and_details(
 
 # TODO audio and text sometimes desync for a short time noticable in joz1c5.
 # probably also caused overlapping audio with the outro
-
-# p = create_post_from_post_id("itlugo")
-background_video, _ = select_background_video(120)
-
-# # title = create_video_title(p)
-title = "Unlock Grandma's Epic Revenge on Greedy Preachers at Funeral!"
-if "|" in title:
-    title = title[: title.index("|")]
-
-keywords = ["caucasian", "man", "frustrated"]
-
-generate_thumbnail(title, background_video, keywords)
