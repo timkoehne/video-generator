@@ -1,0 +1,19 @@
+{
+    "thumbnail_subreddit_icon_size": 150,
+    "thumbnail_subreddit_text_size": 70,
+    "thumbnail_subreddit_text_color": "black",
+    "thumbnail_subreddit_text_font": "Arial-Black",
+    "thumbnail_main_text_size": 70,
+    "thumbnail_main_text_color": "black",
+    "thumbnail_main_text_font": "Arial-Black",
+    "thumbnail_like_icon_size": 70,
+    "thumbnail_like_text_size": 48,
+    "thumbnail_like_text_color": "#63666A",
+    "thumbnail_like_text_font": "Arial-Black",
+    "thumbnail_element_margin": 20,
+    "thumbnail_background_color": "#FFFFFF",
+    "thumbnail_side_offset": 0.1,
+    "thumbnail_default_subreddit_icon": "config/reddit_logo.png",
+    "thumbnail_upvotes_icon": "config/upvote.png",
+    "thumbnail_comments_icon": "config/comments.png"
+}
