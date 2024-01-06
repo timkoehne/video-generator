@@ -6,7 +6,7 @@ class Configuration:
     def __init__(self) -> None:
         with open("config/configuration.json") as file:
             config = json.loads(file.read())
-            
+
         with open("config/config_thumbnail_with_text.json") as file:
             config_thumbnail_with_text = json.loads(file.read())
 
@@ -39,33 +39,58 @@ class Configuration:
 
         self.init_thumbnail(config_thumbnail_with_text)
 
-    def init_thumbnail(self, config):
-        self.thumbnail_subreddit_icon_size: int = config[
+    def init_thumbnail(self, config_thumbnail_with_text):
+        self.thumbnail_subreddit_icon_size: int = config_thumbnail_with_text[
             "thumbnail_subreddit_icon_size"
         ]
-        self.thumbnail_subreddit_text_size: int = config[
+        self.thumbnail_subreddit_text_size: int = config_thumbnail_with_text[
             "thumbnail_subreddit_text_size"
         ]
-        self.thumbnail_subreddit_text_color: str = config[
+        self.thumbnail_subreddit_text_color: str = config_thumbnail_with_text[
             "thumbnail_subreddit_text_color"
         ]
-        self.thumbnail_subreddit_text_font: str = config[
+        self.thumbnail_subreddit_text_font: str = config_thumbnail_with_text[
             "thumbnail_subreddit_text_font"
         ]
-        self.thumbnail_main_text_size: int = config["thumbnail_main_text_size"]
-        self.thumbnail_main_text_color: str = config["thumbnail_main_text_color"]
-        self.thumbnail_main_text_font: str = config["thumbnail_main_text_font"]
-        self.thumbnail_like_icon_size: int = config["thumbnail_like_icon_size"]
-        self.thumbnail_like_text_size: int = config["thumbnail_like_text_size"]
-        self.thumbnail_like_text_color: str = config["thumbnail_like_text_color"]
-        self.thumbnail_like_text_font: str = config["thumbnail_like_text_font"]
-        self.thumbnail_element_margin: int = config["thumbnail_element_margin"]
-        self.thumbnail_background_color: str = config["thumbnail_background_color"]
-        self.thumbnail_side_offset: float = config["thumbnail_side_offset"]
-        self.thumbnail_default_subreddit_icon: str = config["thumbnail_default_subreddit_icon"]
-        self.thumbnail_upvotes_icon: str = config["thumbnail_upvotes_icon"]
-        self.thumbnail_comments_icon: str = config["thumbnail_comments_icon"]
-        
+        self.thumbnail_main_text_size: int = config_thumbnail_with_text[
+            "thumbnail_main_text_size"
+        ]
+        self.thumbnail_main_text_color: str = config_thumbnail_with_text[
+            "thumbnail_main_text_color"
+        ]
+        self.thumbnail_main_text_font: str = config_thumbnail_with_text[
+            "thumbnail_main_text_font"
+        ]
+        self.thumbnail_like_icon_size: int = config_thumbnail_with_text[
+            "thumbnail_like_icon_size"
+        ]
+        self.thumbnail_like_text_size: int = config_thumbnail_with_text[
+            "thumbnail_like_text_size"
+        ]
+        self.thumbnail_like_text_color: str = config_thumbnail_with_text[
+            "thumbnail_like_text_color"
+        ]
+        self.thumbnail_like_text_font: str = config_thumbnail_with_text[
+            "thumbnail_like_text_font"
+        ]
+        self.thumbnail_element_margin: int = config_thumbnail_with_text[
+            "thumbnail_element_margin"
+        ]
+        self.thumbnail_background_color: str = config_thumbnail_with_text[
+            "thumbnail_background_color"
+        ]
+        self.thumbnail_side_offset: float = config_thumbnail_with_text[
+            "thumbnail_side_offset"
+        ]
+        self.thumbnail_default_subreddit_icon: str = config_thumbnail_with_text[
+            "thumbnail_default_subreddit_icon"
+        ]
+        self.thumbnail_upvotes_icon: str = config_thumbnail_with_text[
+            "thumbnail_upvotes_icon"
+        ]
+        self.thumbnail_comments_icon: str = config_thumbnail_with_text[
+            "thumbnail_comments_icon"
+        ]
 
     def init_text_wall(self, config):
         self.text_wall_font: str = config["text_wall_font"]

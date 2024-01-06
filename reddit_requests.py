@@ -67,7 +67,7 @@ class Post:
         self.downvotes: int = int(get_parameter(post, "downs"))
         self.score: int = int(get_parameter(post, "score"))
         self.url: str = get_parameter(post, "url")
-        self.num_comments: int = get_parameter(post, "num_comments")
+        self.num_comments: int = int(get_parameter(post, "num_comments"))
         sr_detail = get_parameter(post, "sr_detail")
         self.subreddit_icon_url: str = sr_detail["icon_img"] # type: ignore
         self.comments: list[Comment] = []

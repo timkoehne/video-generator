@@ -14,3 +14,6 @@ test.py
 channel_images
 database.db
 __pycache__/
+config/comments.png
+config/reddit_logo.png
+config/upvote.png
