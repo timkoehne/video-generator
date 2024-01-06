@@ -182,16 +182,26 @@ def generate_thumbnail_with_text(post: Post, resolution: Tuple[int, int]):
     subreddit_part = generate_subreddit_part(post)
     text_part = generate_text_part(post.title, resolution)
     upvotes_part = generate_upvotes_part(post)
+    combined_height = (
+        subreddit_part.height
+        + text_part.height
+        + upvotes_part.height
+        + 2 * +config.thumbnail_element_margin
+    )
 
     image = Image.new("RGB", resolution, config.thumbnail_background_color)
 
-    text_part_pos = (
-        int(config.thumbnail_side_offset * resolution[0]),
-        int(0.5 * resolution[1] - text_part.height / 2),
-    )
     subreddit_part_pos = (
         int(config.thumbnail_side_offset * resolution[0]),
-        text_part_pos[1] - subreddit_part.height,
+        int(0.5 * resolution[1] - combined_height / 2),
+    )
+    text_part_pos = (
+        int(config.thumbnail_side_offset * resolution[0]),
+        int(
+            subreddit_part_pos[1]
+            + subreddit_part.height
+            + config.thumbnail_element_margin
+        ),
     )
     upvotes_part_pos = (
         int(config.thumbnail_side_offset * resolution[0]),
@@ -201,5 +211,5 @@ def generate_thumbnail_with_text(post: Post, resolution: Tuple[int, int]):
     image.paste(text_part, text_part_pos)
     image.paste(subreddit_part, subreddit_part_pos)
     image.paste(upvotes_part, upvotes_part_pos)
-    
+
     return image
