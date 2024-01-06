@@ -127,7 +127,7 @@ def check_if_valid_post(
             print(f"Post {post_id} is an update")
             return False
 
-    if post_title.lower().startswith("update "):
+    if post_title.lower().startswith("update"):
         print(f"Post {post_id} is an update")
         return False
 

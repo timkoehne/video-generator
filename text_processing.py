@@ -56,17 +56,12 @@ def text_cleanup(text: str) -> str:
         "update:",
         "disclaimer",
     ]
-    for phrase in to_remove_paragraph_if_starts_with:
-        if phrase in text.lower():
-            edit_position = text.lower().index(phrase)
-            if edit_position < len(text) * 0.3 and "\n" in text[edit_position + 1 :]:
-                # print(f"removing {phrase.strip()}")
-                text = text.replace(
-                    text[edit_position : text.index("\n", edit_position + 1)], ""
-                )
-            if edit_position > len(text) * 0.6:
-                # print(f"removing {phrase.strip()}")
-                text = text[0:edit_position]
+    
+    for paragraph in text.split("\n"):
+        for phrase in to_remove_paragraph_if_starts_with:
+            if paragraph.lower().startswith(phrase):
+                # print(f"replacing paragraph starting with {phrase}")
+                text = text.replace(paragraph, "")
 
     to_remove_paragraph_if_included = [
         "throwaway",
