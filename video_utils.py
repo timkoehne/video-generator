@@ -74,12 +74,12 @@ def generate_intro_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
     intro_clip: VideoClip = TextClip(
         config.intro_header + "\n" + post.title,
         size=(resolution[0] * 0.8, 0),
-        color="white",
-        font="Arial-Black",
-        font_size=70,
+        color=config.video_font_color,
+        font=config.video_font,
+        font_size=config.video_font_size,
         method="caption",
-        stroke_color="black",
-        stroke_width=3,
+        stroke_color=config.video_font_stroke_color,
+        stroke_width=config.video_font_stroke_width,
         align="center",
     )
     audio_clip = AudioFileClip(f"tmp/{post.post_id}-audio-intro.mp3")

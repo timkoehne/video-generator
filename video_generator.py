@@ -2,9 +2,10 @@ from enum import Enum
 import json
 import datetime
 import os
+from random import randrange
 import sys
 from typing import Literal, Tuple
-from moviepy import CompositeVideoClip, VideoClip
+from moviepy import CompositeVideoClip, TextClip, VideoClip
 from configuration import Configuration
 from openai_interface import OpenAiInterface
 from reddit_requests import Post, PostSearch, create_post_from_post_id
@@ -77,11 +78,13 @@ def generate_story_video_by_id(post_id: str, resolution: Tuple[int, int]):
     if not os.path.exists(config.output_dir + post.post_id):
         os.mkdir(config.output_dir + post.post_id)
 
-    save_video_and_details(video, post)
+    save_video(video, post)
 
     generate_and_save_description(post, background_video_credit, "story")
-    title = generate_and_save_title(post)
-    # generate_thumbnails(post, background_video, title)
+    generate_and_save_title(post)
+    
+    thumbnail = generate_thumbnail_with_text(post, resolution)
+    thumbnail.save(f"{config.output_dir + post.post_id}/thumbnail.jpg")
 
     for f in os.listdir("tmp/"):
         if f.startswith(f"{post.post_id}"):
@@ -105,11 +108,12 @@ def generate_comment_video_by_id(post_id: str, resolution: Tuple[int, int]):
     if not os.path.exists(config.output_dir + post.post_id):
         os.mkdir(config.output_dir + post.post_id)
 
-    save_video_and_details(video, post)
+    save_video(video, post)
 
     generate_and_save_description(post, background_video_credit, "comment")
-    title = generate_and_save_title(post)
-    # generate_thumbnails(post, background_video, title)
+    generate_and_save_title(post)
+    thumbnail = generate_thumbnail_with_text(post, resolution)
+    thumbnail.save(f"{config.output_dir + post.post_id}/thumbnail.jpg")
 
     for f in os.listdir("tmp/"):
         if f.startswith(f"{post.post_id}"):
@@ -117,7 +121,7 @@ def generate_comment_video_by_id(post_id: str, resolution: Tuple[int, int]):
             pass
 
 
-def generate_and_save_title(post: Post) -> str:
+def generate_and_save_title(post: Post):
     openaiinterface = OpenAiInterface()
     response = openaiinterface.generate_text_without_context(
         config.video_title_prompt, post.title + "\n" + post.selftext
@@ -126,12 +130,11 @@ def generate_and_save_title(post: Post) -> str:
 
     with open(config.output_dir + post.post_id + "/title.txt", "w") as file:
         file.write(response)
-    return response
 
 
 def generate_and_save_description(
     post: Post, background_credit: str, type_of_video: Literal["comment", "story"]
-) -> str:
+):
     if type_of_video == "story":
         reddit_credit = f"This story was posted by {post.author} to r/{post.subreddit}. Available at:\n{post.url}\n"
     elif type_of_video == "comment":
@@ -148,10 +151,8 @@ def generate_and_save_description(
     with open(config.output_dir + post.post_id + "/description.txt", "w") as file:
         file.write(description)
 
-    return description
 
-
-def save_video_and_details(video: VideoClip, post: Post):
+def save_video(video: VideoClip, post: Post):
     video.write_videofile(
         config.output_dir + post.post_id + "/video.mp4",
         fps=config.video_fps,
@@ -187,8 +188,15 @@ def save_video_and_details(video: VideoClip, post: Post):
 # TODO audio and text sometimes desync for a short time noticable in joz1c5.
 # probably also caused overlapping audio with the outro
 
+# subreddit_list = reddit_threads["story_based"]
+# subreddit = subreddit_list[randrange(0, len(subreddit_list))]
+# post_search = PostSearch(subreddit, "top", "all")
+# post = post_search.posts[randrange(0, len(post_search.posts))]
+# print(f"post {post.post_id} has {post.upvotes} upvotes and {post.num_comments} comments")
 
-post = PostSearch("prorevenge", "top", "all").posts[0]
-print(post.post_id)
+# image = generate_thumbnail_with_text(post, (1920, 1080))
+# image.show()
 
-image = generate_thumbnail_with_text(post, (1920, 1080))
+
+generate_story_video((1920, 1080), "all", "top")
+#generate_story_video((1920, 1080), "all", "top")

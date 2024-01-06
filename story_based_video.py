@@ -187,11 +187,11 @@ def generate_text_clip(text: str, size: Tuple[float, float]):
     return TextClip(
         text=text,
         method="caption",
-        color=config.text_clips_font_color,
-        font=config.text_clips_font,
-        font_size=config.text_clips_font_size,
-        stroke_color=config.text_clips_font_stroke_color,
-        stroke_width=config.text_clips_font_stroke_width,
+        color=config.video_font_color,
+        font=config.video_font,
+        font_size=config.video_font_size,
+        stroke_color=config.video_font_stroke_color,
+        stroke_width=config.video_font_stroke_width,
         size=(size[0], size[1]),
         align="center",
     )

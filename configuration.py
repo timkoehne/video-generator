@@ -31,8 +31,7 @@ class Configuration:
             "thumbnail_person_aspect_ratio_max"
         ]
 
-        self.init_text_clips(config)
-        self.init_text_wall(config)
+        self.init_video_text(config)
 
         self.init_openai(config)
         self.init_moviepy(config)
@@ -92,19 +91,12 @@ class Configuration:
             "thumbnail_comments_icon"
         ]
 
-    def init_text_wall(self, config):
-        self.text_wall_font: str = config["text_wall_font"]
-        self.text_wall_font_color: str = config["text_wall_font_color"]
-        self.text_wall_font_size: int = config["text_wall_font_size"]
-        self.text_wall_font_stroke_width: int = config["text_wall_font_stroke_width"]
-        self.text_wall_font_stroke_color: str = config["text_wall_font_stroke_color"]
-
-    def init_text_clips(self, config):
-        self.text_clips_font: str = config["text_clips_font"]
-        self.text_clips_font_color: str = config["text_clips_font_color"]
-        self.text_clips_font_size: int = config["text_clips_font_size"]
-        self.text_clips_font_stroke_width: int = config["text_clips_font_stroke_width"]
-        self.text_clips_font_stroke_color: str = config["text_clips_font_stroke_color"]
+    def init_video_text(self, config):
+        self.video_font: str = config["video_font"]
+        self.video_font_color: str = config["video_font_color"]
+        self.video_font_size: int = config["video_font_size"]
+        self.video_font_stroke_width: int = config["video_font_stroke_width"]
+        self.video_font_stroke_color: str = config["video_font_stroke_color"]
 
     def init_moviepy(self, config):
         self.video_fps: int = config["video_fps"]
