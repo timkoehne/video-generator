@@ -53,12 +53,12 @@ def generate_single_comment_clip(
         clip_part: VideoClip = TextClip(
             part,
             size=(resolution[0] * 0.8, 0),
-            color=config.text_wall_font_color,
-            font=config.text_wall_font,
+            color=config.video_font_color,
+            font=config.video_font,
             font_size=font_sizes[i],
             method="caption",
-            stroke_color=config.text_wall_font_stroke_color,
-            stroke_width=config.text_wall_font_stroke_width,
+            stroke_color=config.video_font_stroke_color,
+            stroke_width=config.video_font_stroke_width,
             align="center",
         )
 
@@ -101,6 +101,8 @@ def find_comment_post(
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
     subreddit_list: list[str],
     approx_video_duration: timedelta | None = None,
+    min_duration: timedelta | None = None,
+    max_duration: timedelta | None = None,
 ):
     maxAttempts = 50
     while True:
@@ -127,6 +129,8 @@ def find_comment_post(
             selected_post.title,
             comments_combined,
             approx_video_duration,
+            min_duration,
+            max_duration,
         )
 
         if valid:
