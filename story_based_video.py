@@ -36,11 +36,21 @@ class Timestamp:
 
 
 def generate_story_clip(
-    post: Post, resolution: Tuple[int, int], language: str = "english"
+    post: Post,
+    resolution: Tuple[int, int],
+    language: str,
+    add_intro: bool,
+    add_outro: bool,
 ) -> VideoClip:
     text: str = post.selftext
-    intro: VideoClip = generate_intro_clip(post, resolution)
-    outro: VideoClip = generate_outro_clip(post, resolution)
+
+    intro: VideoClip | None = None
+    outro: VideoClip | None = None
+
+    if add_intro:
+        intro = generate_intro_clip(post, resolution)
+    if add_outro:
+        outro = generate_outro_clip(post, resolution)
 
     # print("SKIPPING GENERATING AUDIO")
     openaiinterface = OpenAiInterface()
@@ -49,9 +59,13 @@ def generate_story_clip(
 
     audio_clip: AudioClip = AudioFileClip(f"tmp/{post.post_id}-audio.mp3")
     audio_clip.write_audiofile(f"tmp/{post.post_id}-audio.wav")
-    print(
-        f"the video will be {audio_clip.duration + intro.duration + outro.duration}s long"
-    )
+
+    video_duration = audio_clip.duration
+    if intro != None:
+        video_duration += intro.duration
+    if outro != None:
+        video_duration += outro.duration
+    print(f"the video will be {video_duration}s long")
 
     with open(f"tmp/{post.post_id}-audio.txt", "w", encoding="utf-8") as file:
         exclude = set(string.punctuation)
@@ -66,7 +80,8 @@ def generate_story_clip(
     )
     combined_text_clip = combined_text_clip.with_audio(audio_clip)
 
-    combined_text_clip = concatenate_videoclips([intro, combined_text_clip, outro])
+    to_combine = [clip for clip in [intro, combined_text_clip, outro] if clip != None]
+    combined_text_clip = concatenate_videoclips(to_combine)
     combined_text_clip = combined_text_clip.with_position("center")
 
     return combined_text_clip
@@ -224,28 +239,34 @@ def find_story_post(
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
     subreddit_list: list[str],
-    approx_video_duration: timedelta,
+    approx_video_duration: timedelta | None = None,
+    min_duration: timedelta | None = None,
+    max_duration: timedelta | None = None,
 ):
-    maxAttempts = 50
-    while True:
+    selected_post = None
+    max_attempts = 50
+    for i in range(0, max_attempts):
         subreddit = subreddit_list[randrange(0, len(subreddit_list))]
         search = PostSearch(subreddit, listing, timeframe)
 
-        if len(search.posts) < 1:
+        if not hasattr(search, "posts") or len(search.posts) < 1:
             continue
-        selected_post = search.posts[randrange(0, len(search.posts))]
+        p = search.posts[randrange(0, len(search.posts))]
 
         valid = check_if_valid_post(
-            selected_post.post_id,
-            selected_post.title,
-            selected_post.selftext,
+            p.post_id,
+            p.title,
+            p.selftext,
             approx_video_duration=approx_video_duration,
+            min_duration=min_duration,
+            max_duration=max_duration,
         )
 
         if valid:
+            selected_post = p
             break
-        else:
-            maxAttempts -= 1
-            if maxAttempts <= 0:
-                raise Exception(f"No valid post found in {maxAttempts} attempts.")
+        
+    if selected_post == None:
+        raise Exception(f"No valid post found in {max_attempts} attempts.")
+
     return selected_post

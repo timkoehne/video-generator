@@ -114,6 +114,7 @@ def check_if_valid_post(
     text_to_check: str,
     approx_video_duration: timedelta | None = None,
     min_duration: timedelta | None = None,
+    max_duration: timedelta | None = None
 ) -> bool:
     with open("config/already_posted.txt", "r") as file:
         already_posted_ids = file.read().splitlines()
@@ -142,6 +143,10 @@ def check_if_valid_post(
 
     if min_duration != None and not is_min_duration(text_to_check, min_duration):
         print(f"Post {post_id} duration is not over {min_duration} long.")
+        return False
+    
+    if max_duration != None and not is_max_duration(text_to_check, max_duration):
+        print(f"Post {post_id} duration is not under {max_duration} long.")
         return False
 
     print(f"Post {post_id} is valid")

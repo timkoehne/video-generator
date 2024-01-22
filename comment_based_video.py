@@ -71,10 +71,17 @@ def generate_single_comment_clip(
     return comment_clip
 
 
-def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip:
+def generate_comments_clip(post: Post, resolution: Tuple[int, int], add_intro: bool, add_outro: bool) -> VideoClip:
     text_clips: list[VideoClip] = []
-    intro: VideoClip = generate_intro_clip(post, resolution)
-    outro: VideoClip = generate_outro_clip(post, resolution)
+    
+    intro: VideoClip | None = None
+    outro: VideoClip | None = None
+
+    if add_intro:
+        intro = generate_intro_clip(post, resolution)
+    if add_outro:
+        outro = generate_outro_clip(post, resolution)
+    
 
     comments: list[Comment] = post.get_good_comments()
     print(f"There are {len(comments)} good comments")
@@ -90,8 +97,19 @@ def generate_comments_clip(post: Post, resolution: Tuple[int, int]) -> VideoClip
             post, text_parts, font_sizes, resolution, index
         )
         text_clips.append(comment_clip)
+        
     combined_text_video: VideoClip = concatenate_videoclips(text_clips)
-    combined_text_video = concatenate_videoclips([intro, combined_text_video, outro])
+    
+    video_duration = combined_text_video.duration
+    if intro != None:
+        video_duration += intro.duration
+    if outro != None:
+        video_duration += outro.duration
+    print(f"the video will be {video_duration}s long")
+    
+    
+    to_combine = [clip for clip in [intro, combined_text_video, outro] if clip != None]
+    combined_text_video = concatenate_videoclips(to_combine)
     combined_text_video = combined_text_video.with_position("center")
     return combined_text_video
 
@@ -100,43 +118,41 @@ def find_comment_post(
     timeframe: Literal["day", "week", "month", "year", "all"],
     listing: Literal["controversial", "best", "hot", "new", "random", "rising", "top"],
     subreddit_list: list[str],
-    approx_video_duration: timedelta | None = None,
-    min_duration: timedelta | None = None,
-    max_duration: timedelta | None = None,
+    approx_video_duration: timedelta | None = None
 ):
-    maxAttempts = 50
-    while True:
+    selected_post = None
+    max_attempts = 50
+    for i in range(0, max_attempts):
         subreddit = subreddit_list[randrange(0, len(subreddit_list))]
         search = PostSearch(subreddit, listing, timeframe)
 
-        if len(search.posts) < 1:
+        if not hasattr(search, "posts") or len(search.posts) < 1:
             continue
-        selected_post = search.posts[randrange(0, len(search.posts))]
+        p = search.posts[randrange(0, len(search.posts))]
 
         if approx_video_duration != None:
-            good_comments = selected_post.get_good_comments(
+            good_comments = p.get_good_comments(
                 num_chars_to_limit_comments=int(
                     approx_video_duration.total_seconds() * CHARS_PER_SECOND
                 )
             )
         else:
-            good_comments = selected_post.get_good_comments()
+            good_comments = p.get_good_comments()
 
         comments_combined = " ".join([c.body for c in good_comments])
 
         valid = check_if_valid_post(
-            selected_post.post_id,
-            selected_post.title,
+            p.post_id,
+            p.title,
             comments_combined,
-            approx_video_duration,
-            min_duration,
-            max_duration,
+            approx_video_duration
         )
 
         if valid:
+            selected_post = p
             break
-        else:
-            maxAttempts -= 1
-            if maxAttempts <= 0:
-                raise Exception(f"No valid post found in {maxAttempts} attempts.")
+        
+    if selected_post == None:
+        raise Exception(f"No valid post found in {max_attempts} attempts.")
+    
     return selected_post
