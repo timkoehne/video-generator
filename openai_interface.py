@@ -14,9 +14,11 @@ from text_processing import split_text_to_max_x_chars
 
 
 class OpenAiInterface:
-    def __init__(self) -> None:
+    def __init__(self, system_prompt="") -> None:
         self.config = Configuration()
         self.client = OpenAI(api_key=self.config.openai_api_key)
+        self.msg = []
+        self.system_prompt = system_prompt
 
     def generate_image(
         self,
@@ -27,7 +29,7 @@ class OpenAiInterface:
             "256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"
         ] = "1024x1024",
         quality: Literal["standard", "hd"] = "standard",
-        style: Literal["vivid", "natural"] = "vivid"
+        style: Literal["vivid", "natural"] = "vivid",
     ):
         response = self.client.images.generate(
             model=model,
@@ -36,7 +38,7 @@ class OpenAiInterface:
             quality=quality,
             n=1,
             response_format="b64_json",
-            style=style
+            style=style,
         )
 
         name, file_type = filename.split(".")
@@ -68,8 +70,6 @@ class OpenAiInterface:
         text: str,
         filepath: str,
     ):
-        
-        
         filename = filepath[: filepath.index(".")]
         ext = filepath[filepath.index(".") + 1 :]
 
@@ -77,7 +77,10 @@ class OpenAiInterface:
 
         if len(text_segments) < 2:
             response = self.client.audio.speech.create(
-                input=text, model=self.config.audio_model, voice=self.config.audio_voice, response_format="mp3"
+                input=text,
+                model=self.config.audio_model,
+                voice=self.config.audio_voice,
+                response_format="mp3",
             )
             response.stream_to_file(filename + ".mp3")
         else:
@@ -102,6 +105,40 @@ class OpenAiInterface:
             print(f"combining audio files")
             combined_audio: AudioClip = concatenate_audioclips(audio_files)
             combined_audio.write_audiofile(filepath)
+
+    def generate_text_with_context(self, text: str, tries=5) -> str:
+        if len(self.msg) == 0:
+            if self.system_prompt != "":
+                self.msg.append(
+                    {
+                        "role": "system",
+                        "content": self.system_prompt,
+                    }
+                )
+        self.msg.append({"role": "user", "content": text})
+
+        chat_completion = self.client.chat.completions.create(
+            messages=self.msg,  # type: ignore
+            model="gpt-4-1106-preview",
+        )
+
+        if isinstance(chat_completion.choices[0].message.content, str):
+            self.msg.append(
+                {
+                    "role": "assistant",
+                    "content": chat_completion.choices[0].message.content,
+                }
+            )
+            return chat_completion.choices[0].message.content
+        else:
+            print(f"openai text generation error. retries left: {tries}")
+            if tries > 0:
+                time.sleep(3)
+                return self.generate_text_with_context(
+                    text, tries - 1
+                )
+            else:
+                raise Exception("openai text generation failed")
 
     def generate_text_without_context(
         self, system_prompt: str, text: str, tries=5

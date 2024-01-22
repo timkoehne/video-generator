@@ -13,7 +13,9 @@ from comment_based_video import find_comment_post, generate_comments_clip
 from story_based_video import find_story_post, generate_story_clip
 from thumbnail_with_text import generate_thumbnail_with_text
 from video_utils import (
+    check_if_valid_post,
     crop_to_center_and_resize,
+    is_between_durations,
     select_background_video,
 )
 
@@ -61,13 +63,20 @@ def generate_comment_video(
     generate_comment_video_by_id(selected_post.post_id, resolution)
 
 
-def generate_story_video_by_id(post_id: str, resolution: Tuple[int, int]):
+def generate_story_video_by_id(
+    post_id: str,
+    resolution: Tuple[int, int],
+    generate_intro: bool = True,
+    generate_outro: bool = True,
+):
     post = create_post_from_post_id(post_id)
     add_to_already_posted_ids(post.post_id)
     print(f'selected post titled "{post.title}"')
     print(f"saving post_id {post.post_id} as selected")
 
-    video: VideoClip = generate_story_clip(post, resolution)
+    video: VideoClip = generate_story_clip(
+        post, resolution, "english", add_intro=generate_intro, add_outro=generate_outro
+    )
 
     background_video: VideoClip
     background_video_credit: str
@@ -80,9 +89,9 @@ def generate_story_video_by_id(post_id: str, resolution: Tuple[int, int]):
 
     save_video(video, post)
 
-    generate_and_save_description(post, background_video_credit, "story")
+    generate_and_save_description_and_tags(post, background_video_credit, "story")
     generate_and_save_title(post)
-    
+
     thumbnail = generate_thumbnail_with_text(post, resolution)
     thumbnail.save(f"{config.output_dir + post.post_id}/thumbnail.jpg")
 
@@ -91,13 +100,20 @@ def generate_story_video_by_id(post_id: str, resolution: Tuple[int, int]):
             os.remove(f"tmp/{f}")
 
 
-def generate_comment_video_by_id(post_id: str, resolution: Tuple[int, int]):
+def generate_comment_video_by_id(
+    post_id: str,
+    resolution: Tuple[int, int],
+    generate_intro: bool = True,
+    generate_outro: bool = True,
+):
     post = create_post_from_post_id(post_id)
     add_to_already_posted_ids(post.post_id)
     print(f'selected post titled "{post.title}"')
     print(f"saving post_id {post.post_id} as selected")
 
-    video: VideoClip = generate_comments_clip(post, resolution)
+    video: VideoClip = generate_comments_clip(
+        post, resolution, generate_intro, generate_outro
+    )
 
     background_video: VideoClip
     background_video_credit: str
@@ -110,7 +126,7 @@ def generate_comment_video_by_id(post_id: str, resolution: Tuple[int, int]):
 
     save_video(video, post)
 
-    generate_and_save_description(post, background_video_credit, "comment")
+    generate_and_save_description_and_tags(post, background_video_credit, "comment")
     generate_and_save_title(post)
     thumbnail = generate_thumbnail_with_text(post, resolution)
     thumbnail.save(f"{config.output_dir + post.post_id}/thumbnail.jpg")
@@ -122,17 +138,25 @@ def generate_comment_video_by_id(post_id: str, resolution: Tuple[int, int]):
 
 
 def generate_and_save_title(post: Post):
-    openaiinterface = OpenAiInterface()
-    response = openaiinterface.generate_text_without_context(
-        config.video_title_prompt, post.title + "\n" + post.selftext
-    )
-    response = f"{response} | r/{post.subreddit} Reddit Stories"
+    openaiinterface = OpenAiInterface(system_prompt=config.video_title_prompt)
+    prompt = post.title + "\n" + post.selftext
+    
+    for _ in range(0, 5):
+        response = openaiinterface.generate_text_with_context(
+            prompt
+        )
+        response = f"{response} | r/{post.subreddit} Reddit Stories"
+        if len(response) > 0 and len(response) < 100:
+            prompt = "shorter"
+            break
+        else:
+            raise Exception("could not generate a video title")
 
     with open(config.output_dir + post.post_id + "/title.txt", "w") as file:
-        file.write(response)
+        file.write(response) #type: ignore
 
 
-def generate_and_save_description(
+def generate_and_save_description_and_tags(
     post: Post, background_credit: str, type_of_video: Literal["comment", "story"]
 ):
     if type_of_video == "story":
@@ -140,13 +164,19 @@ def generate_and_save_description(
     elif type_of_video == "comment":
         reddit_credit = f"These comments were posted in response to {post.author}'s post on r/{post.subreddit}. Available at:\n{post.url}\n"
 
+    
+    tags = ["reddit", "redditstories", post.subreddit]
+    with open(config.output_dir + post.post_id + "/tags.txt", "w") as file:
+        file.write(",".join(tags))
+    hashtags = " ".join(["#"+tag for tag in tags])
+
     with open(config.background_videos_dir + "channel_urls.json", "r") as file:
         credit_url = json.loads(file.read())[background_credit]
         background_credit = f"The background gameplay is by {background_credit}. Check them out at:\n{credit_url}\n"
 
     openai_disclaimer = f'The audio is AI-generated from {config.audio_api}\'s text-to-speech model "{config.audio_model}" with the voice "{config.audio_voice}".'
 
-    description = reddit_credit + "\n" + background_credit + "\n" + openai_disclaimer
+    description = reddit_credit + "\n" + background_credit + "\n" + openai_disclaimer + "\n\n" + hashtags
 
     with open(config.output_dir + post.post_id + "/description.txt", "w") as file:
         file.write(description)
@@ -188,15 +218,27 @@ def save_video(video: VideoClip, post: Post):
 # TODO audio and text sometimes desync for a short time noticable in joz1c5.
 # probably also caused overlapping audio with the outro
 
-# subreddit_list = reddit_threads["story_based"]
-# subreddit = subreddit_list[randrange(0, len(subreddit_list))]
-# post_search = PostSearch(subreddit, "top", "all")
-# post = post_search.posts[randrange(0, len(post_search.posts))]
-# print(f"post {post.post_id} has {post.upvotes} upvotes and {post.num_comments} comments")
-
-# image = generate_thumbnail_with_text(post, (1920, 1080))
-# image.show()
+# TODO subreddit name can overflow out of the image if its long enough. probably only relevant on vertical video
 
 
-generate_story_video((1920, 1080), "all", "top")
-#generate_story_video((1920, 1080), "all", "top")
+subreddit_list = reddit_threads["story_based"]
+subreddit = subreddit_list[randrange(0, len(subreddit_list))]
+post_search = PostSearch(subreddit, "top", "all")
+post = post_search.posts[randrange(0, len(post_search.posts))]
+
+
+for i in range(0, 10):
+    post = find_story_post(
+        "all",
+        "controversial",
+        reddit_threads["story_based"],
+        # min_duration=datetime.timedelta(seconds=20),
+        # max_duration=datetime.timedelta(seconds=60),
+        min_duration=datetime.timedelta(minutes=4),
+        max_duration=datetime.timedelta(minutes=25),
+    )
+
+    generate_story_video_by_id(
+        # post.post_id, (1080, 1920), generate_intro=False, generate_outro=False
+        post.post_id, (1920, 1080), generate_intro=True, generate_outro=True,
+    )
