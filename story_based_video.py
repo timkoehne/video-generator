@@ -121,9 +121,10 @@ def remove_differences_to_textgrid(filtered_tg, text: str) -> str:
                     if letter not in set(string.punctuation)
                 ]
             )
-            look_for_matches.append(word)
+            look_for_matches.append(word.lower())
 
-        correct_match_index = look_for_matches.index(filtered_tg[i].mark)
+        # print(f"{i} looking for match of {filtered_tg[i].mark} in {look_for_matches}")
+        correct_match_index = look_for_matches.index(str(filtered_tg[i].mark).lower())
         # print(f"looking for {filtered_tg[i].mark} in {look_for_matches}, choosing {look_for_matches[correct_match_index]}")
 
         for delete_index in range(i, i + correct_match_index):
@@ -241,7 +242,7 @@ def find_story_post(
     subreddit_list: list[str],
     approx_video_duration: timedelta | None = None,
     min_duration: timedelta | None = None,
-    max_duration: timedelta | None = None,
+    max_duration: timedelta | None = None
 ):
     selected_post = None
     max_attempts = 50
@@ -257,6 +258,7 @@ def find_story_post(
             p.post_id,
             p.title,
             p.selftext,
+            p.nsfw,
             approx_video_duration=approx_video_duration,
             min_duration=min_duration,
             max_duration=max_duration,

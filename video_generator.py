@@ -146,7 +146,9 @@ def generate_and_save_title(post: Post):
             prompt
         )
         response = f"{response} | r/{post.subreddit} Reddit Stories"
+        print(f"title is {response}")
         if len(response) > 0 and len(response) < 100:
+            print("title too long. trying to shorten...")
             prompt = "shorter"
             break
         else:
@@ -209,8 +211,6 @@ def save_video(video: VideoClip, post: Post):
 # TODO remove urls
 # TODO error handling
 
-
-# TODO mark nsfw
 # TODO for some reason "beautiful" gets replaced with "beautoday". maybe only sometimes??
 # TODO ignore posts that contain images
 # TODO what to do with configuration text_wall_font_size? its dependent on text length
@@ -221,24 +221,26 @@ def save_video(video: VideoClip, post: Post):
 # TODO subreddit name can overflow out of the image if its long enough. probably only relevant on vertical video
 
 
-subreddit_list = reddit_threads["story_based"]
-subreddit = subreddit_list[randrange(0, len(subreddit_list))]
-post_search = PostSearch(subreddit, "top", "all")
-post = post_search.posts[randrange(0, len(post_search.posts))]
 
+# # my usage 
+# for i in range(0, 10):
+#     post = find_story_post(
+#         "all",
+#         "top",
+#         reddit_threads["story_based"],
+#         # min_duration=datetime.timedelta(seconds=20),
+#         # max_duration=datetime.timedelta(seconds=60),
+#         min_duration=datetime.timedelta(minutes=4),
+#         max_duration=datetime.timedelta(minutes=25),
+#     )
 
-for i in range(0, 10):
-    post = find_story_post(
-        "all",
-        "controversial",
-        reddit_threads["story_based"],
-        # min_duration=datetime.timedelta(seconds=20),
-        # max_duration=datetime.timedelta(seconds=60),
-        min_duration=datetime.timedelta(minutes=4),
-        max_duration=datetime.timedelta(minutes=25),
-    )
+    
+#     try:
+#         generate_story_video_by_id(
+#             # post.post_id, (1080, 1920), generate_intro=False, generate_outro=False
+#             post.post_id, (1920, 1080), generate_intro=True, generate_outro=True,
+#         )
+#     except Exception as e:
+#         print(e)
+#         pass
 
-    generate_story_video_by_id(
-        # post.post_id, (1080, 1920), generate_intro=False, generate_outro=False
-        post.post_id, (1920, 1080), generate_intro=True, generate_outro=True,
-    )

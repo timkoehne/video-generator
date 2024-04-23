@@ -112,6 +112,7 @@ def check_if_valid_post(
     post_id: str,
     post_title: str,
     text_to_check: str,
+    nsfw: bool,
     approx_video_duration: timedelta | None = None,
     min_duration: timedelta | None = None,
     max_duration: timedelta | None = None
@@ -120,6 +121,9 @@ def check_if_valid_post(
         already_posted_ids = file.read().splitlines()
     if post_id in already_posted_ids:
         print(f"Post {post_id} has already been posted")
+        return False
+    
+    if nsfw:
         return False
 
     filter_word_in_title = ["update:", "(update)", "[update]"]

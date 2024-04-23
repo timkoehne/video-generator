@@ -145,6 +145,7 @@ def find_comment_post(
             p.post_id,
             p.title,
             comments_combined,
+            p.nsfw,
             approx_video_duration
         )
 

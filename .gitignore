@@ -3,7 +3,7 @@
 ideas.txt
 background_videos/
 finished_videos/
-tmp/
+tmp/*
 config/already_posted.txt
 config/secrets.json
 10kchars.mp3

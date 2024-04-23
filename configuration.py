@@ -18,18 +18,7 @@ class Configuration:
         self.outro_prompt: str = config["outro_prompt"]
         self.video_title_prompt: str = config["video_title_prompt"]
         self.background_video_volume: float = config["background_video_volume"]
-        self.thumbnail_image_dir: str = config["thumbnail_image_dir"]
-        self.thumbnail_text_width_percent: float = config[
-            "thumbnail_text_width_percent"
-        ]
-        self.thumbnail_allowed_overlap: float = config["thumbnail_allowed_overlap"]
-        self.thumbnail_edge_width: int = config["thumbnail_edge_width"]
-        self.thumbnail_person_aspect_ratio_min: float = config[
-            "thumbnail_person_aspect_ratio_min"
-        ]
-        self.thumbnail_person_aspect_ratio_max: float = config[
-            "thumbnail_person_aspect_ratio_max"
-        ]
+        
 
         self.init_video_text(config)
 
